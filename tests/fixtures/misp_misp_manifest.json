@@ -1,0 +1,55 @@
+{
+ "7d3c51f3-8f33-54a1-b1b6-0c617beefa74": {
+  "Orgc": {
+   "name": "dmz.ahmadmesto.com",
+   "uuid": "fb282ff3-0a36-5fa1-9455-b07bee0e628f"
+  },
+  "Tag": [
+   {
+    "name": "tlp:clear",
+    "colour": "#ffffff"
+   },
+   {
+    "name": "type:OSINT",
+    "colour": "#004646"
+   },
+   {
+    "name": "osint:source-type=\"block-or-filter-list\"",
+    "colour": "#004646"
+   },
+   {
+    "name": "misp-galaxy:mitre-attack-pattern=\"Monitor Process State - T0801\"",
+    "colour": "#0088cc"
+   },
+   {
+    "name": "misp-galaxy:mitre-attack-pattern=\"Remote System Information Discovery - T0888\"",
+    "colour": "#0088cc"
+   },
+   {
+    "name": "misp-galaxy:mitre-attack-pattern=\"Remote Desktop Protocol - T1021.001\"",
+    "colour": "#0088cc"
+   },
+   {
+    "name": "misp-galaxy:mitre-attack-pattern=\"Brute Force - T1110\"",
+    "colour": "#0088cc"
+   },
+   {
+    "name": "misp-galaxy:mitre-attack-pattern=\"Exploit Public-Facing Application - T1190\"",
+    "colour": "#0088cc"
+   },
+   {
+    "name": "misp-galaxy:mitre-attack-pattern=\"Vulnerability Scanning - T1595.002\"",
+    "colour": "#0088cc"
+   },
+   {
+    "name": "misp-galaxy:mitre-attack-pattern=\"Command Message - T1692.001\"",
+    "colour": "#0088cc"
+   }
+  ],
+  "info": "Uninvited honeypot: hosts that attacked dmz.ahmadmesto.com in the last 7d",
+  "date": "2026-09-21",
+  "analysis": "1",
+  "threat_level_id": "3",
+  "timestamp": "1790000000"
+ }
+}

@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Captured attacker data and anything that could hold credentials
+data/
+*.db
+*.db-wal
+*.db-shm
+*.tgz
+*.bak
+
+# Your real config (home-specific addresses). Use config.example.yaml as the template.
+config.live.yaml
+config.local.yaml
+
+# Keys and secrets, in case one ever lands in the folder
+*.pem
+*.key
+id_*
+*.pub
+
+# Preview tool: data snapshots pulled from the live site, regenerated on demand
+preview/override/
+
+# Local editor settings
+.vscode/
+stage*/
+
+# Strings the public export must never contain (your address, account names): never commit
+.private-strings

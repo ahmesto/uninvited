@@ -1,0 +1,51 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+      - run: pip install -r requirements-dev.txt
+      - name: Lint (ruff.toml is the rule set)
+        run: python -m ruff check .
+      - name: Unit, integration and fuzz tests
+        run: python -m unittest discover tests
+      - name: The shipped configurations are valid
+        run: |
+          python -m uninvited --check -c config.example.yaml
+          python -m uninvited --check -c config.quickstart.yaml
+      - name: Shell scripts parse
+        run: for f in deploy/*.sh; do bash -n "$f"; done
+
+  secrets:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  audit:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - run: pip install pip-audit
+      - name: Known vulnerabilities in the dependencies
+        run: pip-audit -r requirements.txt

@@ -1,0 +1,239 @@
+{
+ "Event": {
+  "uuid": "7d3c51f3-8f33-54a1-b1b6-0c617beefa74",
+  "info": "Uninvited honeypot: hosts that attacked dmz.ahmadmesto.com in the last 7d",
+  "date": "2026-09-21",
+  "threat_level_id": "3",
+  "analysis": "1",
+  "published": true,
+  "timestamp": "1790000000",
+  "publish_timestamp": "1790000000",
+  "Orgc": {
+   "name": "dmz.ahmadmesto.com",
+   "uuid": "fb282ff3-0a36-5fa1-9455-b07bee0e628f"
+  },
+  "Org": {
+   "name": "dmz.ahmadmesto.com",
+   "uuid": "fb282ff3-0a36-5fa1-9455-b07bee0e628f"
+  },
+  "Tag": [
+   {
+    "name": "tlp:clear",
+    "colour": "#ffffff"
+   },
+   {
+    "name": "type:OSINT",
+    "colour": "#004646"
+   },
+   {
+    "name": "osint:source-type=\"block-or-filter-list\"",
+    "colour": "#004646"
+   },
+   {
+    "name": "misp-galaxy:mitre-attack-pattern=\"Monitor Process State - T0801\"",
+    "colour": "#0088cc"
+   },
+   {
+    "name": "misp-galaxy:mitre-attack-pattern=\"Remote System Information Discovery - T0888\"",
+    "colour": "#0088cc"
+   },
+   {
+    "name": "misp-galaxy:mitre-attack-pattern=\"Remote Desktop Protocol - T1021.001\"",
+    "colour": "#0088cc"
+   },
+   {
+    "name": "misp-galaxy:mitre-attack-pattern=\"Brute Force - T1110\"",
+    "colour": "#0088cc"
+   },
+   {
+    "name": "misp-galaxy:mitre-attack-pattern=\"Exploit Public-Facing Application - T1190\"",
+    "colour": "#0088cc"
+   },
+   {
+    "name": "misp-galaxy:mitre-attack-pattern=\"Vulnerability Scanning - T1595.002\"",
+    "colour": "#0088cc"
+   },
+   {
+    "name": "misp-galaxy:mitre-attack-pattern=\"Command Message - T1692.001\"",
+    "colour": "#0088cc"
+   }
+  ],
+  "Attribute": [
+   {
+    "uuid": "989467c6-4d43-536d-a759-41baf023d165",
+    "type": "ip-src",
+    "category": "Network activity",
+    "value": "198.51.100.20",
+    "to_ids": true,
+    "comment": "score 55; 9 events; T1110",
+    "first_seen": "2026-09-16T14:13:20.000000+00:00",
+    "last_seen": "2026-09-21T13:13:20.000000+00:00",
+    "Tag": [
+     {
+      "name": "uninvited:tag=\"ssh-bruteforce\"",
+      "colour": "#c0392b"
+     },
+     {
+      "name": "uninvited:score=\"55\"",
+      "colour": "#7f8c8d"
+     },
+     {
+      "name": "misp-galaxy:mitre-attack-pattern=\"Brute Force - T1110\"",
+      "colour": "#0088cc"
+     }
+    ],
+    "timestamp": "1790000000"
+   },
+   {
+    "uuid": "aac72cb9-7d26-56d7-ae61-4f6f5600f06c",
+    "type": "ip-src",
+    "category": "Network activity",
+    "value": "198.51.100.21",
+    "to_ids": true,
+    "comment": "score 82; 40 events; T1190; CVE-2021-36260",
+    "first_seen": "2026-09-20T14:13:20.000000+00:00",
+    "last_seen": "2026-09-21T14:03:20.000000+00:00",
+    "Tag": [
+     {
+      "name": "uninvited:tag=\"web-exploit\"",
+      "colour": "#c0392b"
+     },
+     {
+      "name": "uninvited:tag=\"camera-exploit\"",
+      "colour": "#c0392b"
+     },
+     {
+      "name": "uninvited:score=\"82\"",
+      "colour": "#7f8c8d"
+     },
+     {
+      "name": "misp-galaxy:mitre-attack-pattern=\"Exploit Public-Facing Application - T1190\"",
+      "colour": "#0088cc"
+     }
+    ],
+    "timestamp": "1790000000"
+   },
+   {
+    "uuid": "fdf445f1-2975-5857-bb92-44dab91ba543",
+    "type": "ip-src",
+    "category": "Network activity",
+    "value": "203.0.113.30",
+    "to_ids": true,
+    "comment": "score 40; 5 events; T1692.001, T0888, T0801",
+    "first_seen": "2026-09-16T14:13:20.000000+00:00",
+    "last_seen": "2026-09-21T13:13:20.000000+00:00",
+    "Tag": [
+     {
+      "name": "uninvited:tag=\"ics-write\"",
+      "colour": "#c0392b"
+     },
+     {
+      "name": "uninvited:tag=\"ics-recon\"",
+      "colour": "#c0392b"
+     },
+     {
+      "name": "uninvited:score=\"40\"",
+      "colour": "#7f8c8d"
+     },
+     {
+      "name": "misp-galaxy:mitre-attack-pattern=\"Command Message - T1692.001\"",
+      "colour": "#0088cc"
+     },
+     {
+      "name": "misp-galaxy:mitre-attack-pattern=\"Remote System Information Discovery - T0888\"",
+      "colour": "#0088cc"
+     },
+     {
+      "name": "misp-galaxy:mitre-attack-pattern=\"Monitor Process State - T0801\"",
+      "colour": "#0088cc"
+     }
+    ],
+    "timestamp": "1790000000"
+   },
+   {
+    "uuid": "9f9638eb-60db-51d5-87d6-523ffd3c6fd5",
+    "type": "ip-src",
+    "category": "Network activity",
+    "value": "2001:db8::7",
+    "to_ids": true,
+    "comment": "score 97; 900 events; T1110",
+    "first_seen": "2026-08-23T14:13:20.000000+00:00",
+    "last_seen": "2026-09-21T14:12:20.000000+00:00",
+    "Tag": [
+     {
+      "name": "uninvited:tag=\"telnet-bruteforce\"",
+      "colour": "#c0392b"
+     },
+     {
+      "name": "uninvited:tag=\"persistent\"",
+      "colour": "#c0392b"
+     },
+     {
+      "name": "uninvited:score=\"97\"",
+      "colour": "#7f8c8d"
+     },
+     {
+      "name": "misp-galaxy:mitre-attack-pattern=\"Brute Force - T1110\"",
+      "colour": "#0088cc"
+     }
+    ],
+    "timestamp": "1790000000"
+   },
+   {
+    "uuid": "aba49d40-7deb-5b7f-90bc-fa60a4773738",
+    "type": "ip-src",
+    "category": "Network activity",
+    "value": "192.0.2.99",
+    "to_ids": true,
+    "comment": "score 12; 3 events; T1595.002",
+    "first_seen": "2026-09-21T12:13:20.000000+00:00",
+    "last_seen": "2026-09-21T12:13:20.000000+00:00",
+    "Tag": [
+     {
+      "name": "uninvited:score=\"12\"",
+      "colour": "#7f8c8d"
+     },
+     {
+      "name": "misp-galaxy:mitre-attack-pattern=\"Vulnerability Scanning - T1595.002\"",
+      "colour": "#0088cc"
+     }
+    ],
+    "timestamp": "1790000000"
+   },
+   {
+    "uuid": "80cd3118-f519-5032-aa9a-405b04426b91",
+    "type": "ip-src",
+    "category": "Network activity",
+    "value": "198.51.100.22",
+    "to_ids": true,
+    "comment": "score 30; 7 events; T1021.001",
+    "first_seen": "2026-09-19T14:13:20.000000+00:00",
+    "last_seen": "2026-09-20T14:13:20.000000+00:00",
+    "Tag": [
+     {
+      "name": "uninvited:tag=\"rdp-scan\"",
+      "colour": "#c0392b"
+     },
+     {
+      "name": "uninvited:score=\"30\"",
+      "colour": "#7f8c8d"
+     },
+     {
+      "name": "misp-galaxy:mitre-attack-pattern=\"Remote Desktop Protocol - T1021.001\"",
+      "colour": "#0088cc"
+     }
+    ],
+    "timestamp": "1790000000"
+   },
+   {
+    "uuid": "d7df4c18-8c45-54ef-b7ad-f7650b71b584",
+    "type": "vulnerability",
+    "category": "External analysis",
+    "value": "CVE-2021-36260",
+    "to_ids": false,
+    "comment": "tried by 1 host on this list: 198.51.100.21",
+    "timestamp": "1790000000"
+   }
+  ]
+ }
+}

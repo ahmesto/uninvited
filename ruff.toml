@@ -1,0 +1,19 @@
+# One rule set for the whole repository. `python -m ruff check .` must be clean.
+line-length = 120
+target-version = "py312"
+
+[lint]
+select = ["E", "F", "W", "B", "UP", "SIM", "C4", "RUF", "PLW", "PLE"]
+ignore = [
+    "E501",    # long lines: the limit above is advisory, prose in strings is not wrapped
+    "SIM105",  # try/except/pass reads fine without contextlib.suppress
+    "SIM108",  # an if/else is clearer than a long ternary
+    "RUF012",  # module-level dict defaults on classes are deliberate here
+    "RUF001",  # typographic characters in strings are on purpose
+    "B905",    # zip(strict=) adds noise where the lengths are known
+    "PLW2901", # reusing a loop name is clear in the short loops here
+]
+
+[lint.per-file-ignores]
+"tests/*" = ["E741", "B017", "B007", "PLW"]
+"tools/*" = ["E741"]

@@ -1,0 +1,133 @@
+# Production config template for the hardened layout:
+#   code   /opt/uninvited        config /etc/uninvited/config.yaml        data /var/lib/uninvited
+#
+# Copy it to /etc/uninvited/config.yaml on the server and fill in your own public
+# address below; docs/RUNNING.md walks through the install. A filled-in copy kept
+# next to the code should be called config.live.yaml: git ignores that name.
+# Check a config before the service starts on it: python -m uninvited --check -c <file>
+
+listen_ip: 0.0.0.0
+
+dashboard:
+  # Loopback only. cloudflared reaches it at 127.0.0.1:8090, and a wider bind
+  # publishes every captured credential to whatever can route to the VM.
+  host: 127.0.0.1
+  port: 8090
+  # Never shown on the public dashboard. Scanners type the address they are
+  # attacking into the RDP username, which would publish this connection.
+  hide:
+    - 203.0.113.10          # YOUR public address. This one is a documentation address.
+
+database: /var/lib/uninvited/uninvited.db
+ssh_host_key: /var/lib/uninvited/ssh_host_rsa_key
+retention_days: 90
+max_connections: 400
+feed_size: 100
+board_size: 30
+
+feed:
+  # Never published, however many events they log. Private addresses are
+  # already excluded automatically, so only put public ones here. Use exact
+  # addresses: a wider range hides real neighbours.
+  exclude:
+    - 203.0.113.10/32       # YOUR public address, as an exact /32
+
+geoip:
+  city_db: /var/lib/GeoIP/GeoLite2-City.mmdb
+  asn_db: /var/lib/GeoIP/GeoLite2-ASN.mmdb
+
+site:
+  # Who this instance is. Everything that names the site reads it from here: the page, the feed
+  # files, the STIX, TAXII and MISP identifiers, the social cards, robots.txt and the sitemap.
+  # Use your own name and address: a copy must never publish under somebody else's.
+  title: Uninvited                     # the name on the page and in the feeds
+  tagline: a server left open on purpose
+  url: example.org                     # the public address; the published identifiers derive from it
+  # The footer credit and the header link. Leave them out and the page credits nobody.
+  # owner: Jane Doe
+  # owner_title: Security Engineer
+  # owner_url: https://example.net     # also allowed to show this site in a frame
+  # Where to report a vulnerability in this site. Served at /.well-known/security.txt
+  # (RFC 9116). Leave it out and that file is simply not served. A https:// address
+  # or a mailto: address.
+  # security_contact: mailto:security@example.org
+  # Content-Security-Policy: "report" only reports violations in the browser console,
+  # "enforce" blocks them. Start with report, check the console on every tab, then enforce.
+  csp: report
+
+services:
+  - proto: SSH
+    port: 2222
+    banner: SSH-2.0-OpenSSH_8.9p1 Ubuntu-3ubuntu0.10
+  - proto: TNET
+    port: 2323
+  - proto: FTP
+    port: 2121
+  - proto: HTTP
+    port: 8081
+  - proto: SMTP
+    port: 2525
+  - proto: RDP
+    port: 33890            # the RDP decoy listens here, the gateway forwards 3389 to it
+  - proto: SMB
+    port: 4445
+  - proto: SIP
+    port: 5060
+    udp: true
+  - proto: MODBUS
+    port: 5020             # the gateway forwards 502 to it, once you add that forward
+    enabled: false         # off until the forward exists and the identity is agreed
+    identity:              # what the decoy says it is. CHANGE IT: these values are public with the
+                           # code, so a sensor that keeps them can be found by searching for them.
+                           # The same goes for every identity and model below (the check warns).
+      vendor: Lakeside Controls
+      product: LC-2200 Controller
+      revision: V2.1.4
+
+  # More decoys. Every one is off until you set enabled: true, and each needs its own
+  # port forward at the gateway. Read docs/DECOYS.md before turning any on.
+  - proto: S7                # Siemens S7comm. Forward WAN 102 to this port.
+    port: 5102
+    enabled: false
+    identity:                # what it says it is when a scanner asks
+      module_type: CPU 315-2 PN/DP
+      order_code: 6ES7 315-2EH14-0AB0
+      as_name: PLC_1
+      plant: Pump Station 4
+      serial: S C-X4U421302009
+      firmware: 3.2.6
+  - proto: ENIP              # EtherNet/IP over TCP. Forward WAN 44818 to this port.
+    port: 44818
+    enabled: false
+    identity:
+      name: 1756-L61/B LOGIX5561
+      vendor: 1
+      product_code: 55
+      revision: 20.11
+      advertise_ip: 0.0.0.0  # the address it reports. Leave this alone, a real value leaks yours.
+  - proto: DNP3              # experimental. Forward WAN 20000 to this port.
+    port: 20000
+    enabled: false
+    # address: 10            # answer only this outstation address; leave out to answer any
+  - proto: CAM               # IP camera web server. Forward WAN 8000 to this port.
+    port: 8083
+    service: web
+    enabled: false
+    model: IPC-2100
+  - proto: CAM               # the same camera's video port. Forward WAN 554 to this port.
+    port: 8554
+    service: rtsp
+    enabled: false
+    model: IPC-2100
+  - proto: ROUTER            # router admin page. Forward WAN 8888 to this port.
+    port: 8084
+    service: web
+    enabled: false
+    model: WR-1200
+  - proto: ROUTER            # router remote management (TR-069). Forward WAN 7547 to this port.
+    port: 7547
+    service: tr069
+    enabled: false
+  - proto: MCP               # AI tool server and model API. Forward WAN 3000 to this port.
+    port: 8085
+    enabled: false

@@ -1,0 +1,52 @@
+[Unit]
+Description=Uninvited honeypot and attack dashboard
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=uninvited
+Group=uninvited
+WorkingDirectory=/opt/uninvited
+ExecStart=/opt/uninvited/.venv/bin/python -m uninvited --config /etc/uninvited/config.yaml
+Restart=always
+RestartSec=5
+# Hostile clients hold sockets open; do not wait 90s to reclaim them.
+TimeoutStopSec=15
+KillMode=mixed
+
+# The daemon binds high ports only; nftables redirects the real ones. Uncomment
+# the next line instead if you switched config.yaml to well known ports.
+# AmbientCapabilities=CAP_NET_BIND_SERVICE
+
+# This process handles hostile input all day. Give it as little as possible.
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+ProtectProc=invisible
+RestrictNamespaces=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+LockPersonality=true
+MemoryDenyWriteExecute=false
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+ReadWritePaths=/var/lib/uninvited
+CapabilityBoundingSet=
+LimitNOFILE=8192
+MemoryMax=768M
+# Each SSH decoy session costs two threads (paramiko's transport plus ours),
+# and max_connections allows 400 of them, so 512 would fail under a burst.
+TasksMax=1500
+
+[Install]
+WantedBy=multi-user.target

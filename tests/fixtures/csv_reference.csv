@@ -1,0 +1,7 @@
+ip,first_seen,last_seen,events,score,protocols,country,asn,network,hassh,attack_techniques,cves,exploits,label,classification,tags,host_type,collateral_risk,expires,ja3
+198.51.100.20,2026-09-16T14:13:20Z,2026-09-21T13:13:20Z,9,55,SSH,NL,64500,Example Hosting BV,ae8bd7dd09970555aa4ea8ab1b0b1e1c,T1110,,,,malicious,ssh-bruteforce,hosting,low,2026-09-28T13:13:20Z,
+198.51.100.21,2026-09-20T14:13:20Z,2026-09-21T14:03:20Z,40,82,HTTP;CAM,NL,64500,Example Hosting BV,ae8bd7dd09970555aa4ea8ab1b0b1e1c,T1190,CVE-2021-36260,Hikvision RCE (CVE-2021-36260),,malicious,web-exploit;camera-exploit,isp,medium,2026-09-26T14:03:20Z,
+203.0.113.30,2026-09-16T14:13:20Z,2026-09-21T13:13:20Z,5,40,MODBUS;S7,,,,,T1692.001;T0888;T0801,,,,malicious,ics-write;ics-recon,unknown,unknown,2026-09-28T13:13:20Z,
+2001:db8::7,2026-08-23T14:13:20Z,2026-09-21T14:12:20Z,900,97,TNET;SSH,NL,64500,'=SUM(1+1) Telecom,ae8bd7dd09970555aa4ea8ab1b0b1e1c,T1110,,,,malicious,telnet-bruteforce;persistent,hosting,low,2026-10-01T14:12:20Z,
+192.0.2.99,2026-09-21T12:13:20Z,2026-09-21T12:13:20Z,3,12,HTTP,NL,64500,Example Hosting BV,ae8bd7dd09970555aa4ea8ab1b0b1e1c,T1595.002,,,,malicious,,hosting,low,2026-09-24T12:13:20Z,
+198.51.100.22,2026-09-19T14:13:20Z,2026-09-20T14:13:20Z,7,30,RDP,NL,64500,Example Hosting BV,ae8bd7dd09970555aa4ea8ab1b0b1e1c,T1021.001,,,,malicious,rdp-scan,hosting,low,2026-09-25T14:13:20Z,

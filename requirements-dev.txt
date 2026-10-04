@@ -1,0 +1,11 @@
+# Only for running the tests and the tools. The service itself needs requirements.txt.
+-r requirements.txt
+httpx==0.28.1
+ruff==0.16.10
+pymodbus==3.15.0
+# Independent protocol clients the decoy tests run against. Those tests skip without them.
+python-snap7==3.2.0
+pycomm3==1.2.16
+# TAXII 2.1: the reference client, and the strict STIX parser that checks every object it gets.
+taxii2-client==2.3.0
+stix2==3.0.2
