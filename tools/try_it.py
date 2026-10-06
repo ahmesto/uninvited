@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Knock on every decoy of a local Uninvited, so the dashboard has something to show.
 
-    python -m uninvited --config config.quickstart.yaml     # in one terminal
-    python tools/try_it.py                               # in another
+    python -m uninvited --demo      # in one terminal (it knocks once by itself)
+    python -m uninvited --knock     # in another, to knock again: it runs this file
 
 Each probe is a small, harmless imitation of something a real scanner or botnet sends: a failed
 login, a request for a leaked .env file, a Modbus read, an S7 identification request, an AI-tool
@@ -177,10 +177,24 @@ PROBES = [("SSH", probe_ssh), ("Telnet", probe_telnet), ("FTP", probe_ftp), ("SM
           ("RTSP", probe_rtsp), ("Router", probe_router), ("TR-069", probe_tr069), ("AI tool server", probe_mcp)]
 
 
-def main() -> int:
+def knock(host: str, say=print) -> int:
+    """Run every probe once against host and say what each decoy answered. -> how many answered."""
+    answered = 0
+    for name, fn in PROBES:
+        try:
+            result = fn(host)
+            answered += 1
+            say(f"  {name:15} {result}")
+        except OSError as exc:
+            say(f"  {name:15} not reachable ({exc.strerror or exc}). Is the demo running (uninvited --demo)?")
+        time.sleep(0.05)
+    return answered
+
+
+def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--host", default="127.0.0.1", help="the machine running Uninvited (default: this one)")
-    args = ap.parse_args()
+    args = ap.parse_args(argv)
     try:
         addr = ipaddress.ip_address(socket.gethostbyname(args.host))
     except (OSError, ValueError):
@@ -191,15 +205,7 @@ def main() -> int:
         return 2
 
     print(f"Knocking on every decoy at {args.host}\n")
-    answered = 0
-    for name, fn in PROBES:
-        try:
-            result = fn(args.host)
-            answered += 1
-            print(f"  {name:15} {result}")
-        except OSError as exc:
-            print(f"  {name:15} not reachable ({exc.strerror or exc}). Is uninvited running with config.quickstart.yaml?")
-        time.sleep(0.05)
+    answered = knock(args.host)
     print(f"\n{answered} of {len(PROBES)} decoys answered. Open http://{args.host}:8090/ to see them.")
     return 0 if answered else 1
 

@@ -1,0 +1,60 @@
+# How pip installs Uninvited:
+#
+#   pipx install git+https://github.com/ahmesto/uninvited
+#   uninvited --demo
+#
+# In this repository the page, the demo config, the example config and the knocking tool sit
+# beside the package. An installed copy has no "beside", so the wheel carries them inside the
+# package (force-include below) and uninvited.core.shipped() looks there first.
+
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "uninvited"
+version = "0.1.0"
+description = "A honeypot with a live dashboard and a threat feed built from what it catches."
+readme = "README.md"
+requires-python = ">=3.12"
+license = "Apache-2.0"
+authors = [{ name = "Ahmad Mesto" }]
+keywords = ["honeypot", "threat-intelligence", "blocklist", "stix", "taxii", "misp"]
+classifiers = [
+  "Environment :: No Input/Output (Daemon)",
+  "Intended Audience :: Information Technology",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Security",
+]
+# The same exact versions as requirements.txt. tests/test_packaging.py keeps the two lists equal.
+dependencies = [
+  "fastapi==0.142.2",
+  "uvicorn[standard]==0.54.0",
+  "websockets==17.1",
+  "paramiko==5.0.0",
+  "geoip2==5.3.0",
+  "PyYAML==6.0.3",
+  "Pillow==12.3.0",
+]
+
+[project.scripts]
+uninvited = "uninvited.__main__:main"
+
+[project.urls]
+Source = "https://github.com/ahmesto/uninvited"
+
+[tool.hatch.build.targets.wheel]
+packages = ["uninvited"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"static" = "uninvited/static"
+"config.quickstart.yaml" = "uninvited/quickstart.yaml"
+"config.example.yaml" = "uninvited/example.yaml"
+"tools/try_it.py" = "uninvited/try_it.py"
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "/uninvited", "/static", "/tools/try_it.py", "/config.quickstart.yaml", "/config.example.yaml",
+  "/requirements.txt", "/README.md", "/THIRD-PARTY-NOTICES.md", "/LICENSE",
+]

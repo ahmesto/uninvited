@@ -1,0 +1,14 @@
+# Only what the image is built from goes to the builder. Everything else stays out of it:
+# your config, your data, the git history, the tests.
+*
+!pyproject.toml
+!requirements.txt
+!README.md
+!uninvited
+!static
+!tools/try_it.py
+!config.quickstart.yaml
+!config.example.yaml
+!config.docker.yaml
+**/__pycache__
+**/*.pyc

@@ -1,0 +1,48 @@
+#   docker compose up
+#
+# Builds the image and starts the demo. Open http://127.0.0.1:8090/.
+#
+# Every port is published on 127.0.0.1 only, so nothing is reachable from outside your machine.
+# The container is read-only, unprivileged, has no capabilities and is limited in memory and
+# processes. What it records is kept in the volume "data"; docker compose down -v removes it.
+# For a real sensor see docs/RUNNING.md, "With Docker".
+name: uninvited
+
+services:
+  uninvited:
+    build: .
+    image: uninvited
+    read_only: true
+    tmpfs:
+      - /tmp
+    user: "10001:10001"
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 768m
+    pids_limit: 512
+    restart: unless-stopped
+    volumes:
+      - data:/data
+    ports:
+      - "127.0.0.1:8090:8090"      # the dashboard
+      - "127.0.0.1:2222:2222"      # SSH
+      - "127.0.0.1:2323:2323"      # Telnet
+      - "127.0.0.1:2121:2121"      # FTP
+      - "127.0.0.1:8081:8081"      # HTTP
+      - "127.0.0.1:2525:2525"      # SMTP
+      - "127.0.0.1:33890:33890"    # RDP
+      - "127.0.0.1:4445:4445"      # SMB
+      - "127.0.0.1:5060:5060"      # SIP over TCP
+      - "127.0.0.1:5020:5020"      # Modbus
+      - "127.0.0.1:5102:5102"      # S7
+      - "127.0.0.1:44818:44818"    # EtherNet/IP
+      - "127.0.0.1:20001:20001"    # DNP3
+      - "127.0.0.1:8083:8083"      # camera web
+      - "127.0.0.1:8554:8554"      # camera RTSP
+      - "127.0.0.1:8084:8084"      # router web
+      - "127.0.0.1:7547:7547"      # router TR-069
+      - "127.0.0.1:8085:8085"      # AI tool server
+
+volumes:
+  data:

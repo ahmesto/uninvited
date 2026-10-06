@@ -10,7 +10,6 @@ import re
 import logging
 import time
 from concurrent.futures import ThreadPoolExecutor
-from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, Query, Request, WebSocket, WebSocketDisconnect
@@ -23,7 +22,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from . import digest, hardening, intel, ippage, sitefiles, taxii
 from .analyze import campaigns, narrate
 from .card import build_png, build_png_native, build_svg
-from .core import Config, Knock, PROTO_COLORS
+from .core import Config, Knock, PROTO_COLORS, shipped
 from .feeds import CHANGE_LISTS, REFRESH_SECONDS, FeedCache
 from .identity import Identity
 from .history import parse_since
@@ -33,7 +32,7 @@ from .store import Store
 
 log = logging.getLogger("uninvited.web")
 
-STATIC = Path(__file__).resolve().parent.parent / "static"
+STATIC = shipped("static", "static")
 
 SEND_TIMEOUT = 3  # seconds a dashboard client gets to accept one message
 

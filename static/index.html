@@ -450,10 +450,12 @@ body:not([data-view="live"]) #t-probe{display:none}
 .hc .bar i{width:48px;height:3px;background:rgba(255,255,255,.1);display:block}
 .hc .bar i b{display:block;height:3px}
 .ov-urls .blk-b{padding:4px 20px 10px}
-.fmts.six{grid-template-columns:repeat(6,1fr);border:none;border-top:1px solid var(--rule)}
-.fmt p{min-height:38px}
+.fl-ov{padding:13px 20px 14px;gap:8px 22px;font-size:12px}
+.fl-more{margin-left:auto;font-size:11.5px;color:var(--label)}
+.fl-more a{font-family:var(--sans);font-size:11.5px;color:var(--text2)}
 .ovsnip{margin:0;border:none;border-top:1px solid var(--rule);background:none;padding:14px 20px}
-@media (max-width:1250px){.fmts.six{grid-template-columns:repeat(3,1fr)}.hc{grid-template-columns:120px 80px minmax(0,1fr)}.hc .ev{display:none}}
+@media (max-width:1250px){.hc{grid-template-columns:120px 80px minmax(0,1fr)}.hc .ev{display:none}}
+@media (max-width:900px){.fl-more{margin-left:0;flex-basis:100%}}
 .sub{display:none}
 .sub.on{display:block}
 /* Keyboard users can jump past the header. Invisible until it has focus. */
@@ -519,6 +521,53 @@ body:not([data-view="live"]) #t-probe{display:none}
 .ibrief b{font-weight:700;color:var(--text2)}
 #v-intel .sub > .blk{margin-bottom:22px}
 .hc .net{color:var(--dim);margin-left:8px}
+/* Hosts: the lookup and the log checker side by side, above the list. */
+.findrow{display:grid;grid-template-columns:1fr 1fr;gap:22px;align-items:start;margin-bottom:22px}
+/* Timeline: one bar per listed host over a shared time axis. The grid lines are one layer
+   laid over the track column, so every row shares them without carrying its own. */
+.tl-board{position:relative;--tl-who:170px;--tl-sc:56px;--tl-gap:14px;--tl-pad:20px}
+.tl-legend{display:flex;flex-wrap:wrap;gap:6px 22px;padding:10px 20px 11px;font-size:11px;color:var(--label);
+  border-bottom:1px solid var(--rule-soft)}
+.tl-legend span{display:inline-flex;align-items:center;gap:7px}
+.tl-k{display:inline-block;width:14px;height:6px;background:var(--text2)}
+.tl-k.hot{background:var(--red-t)}
+.tl-k.pin{width:2px;height:12px;background:var(--red-t)}
+.tl-k.before{width:0;height:0;background:none;border-top:4px solid transparent;border-bottom:4px solid transparent;
+  border-right:6px solid var(--text2)}
+.tl-row{display:grid;grid-template-columns:var(--tl-who) minmax(0,1fr) var(--tl-sc);gap:var(--tl-gap);align-items:center;
+  padding:0 var(--tl-pad);height:26px;border-top:1px solid var(--rule-soft);font-size:12px;color:var(--text)}
+.tl-row.clk:hover{background:rgba(255,255,255,.04)}
+.tl-row .who{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tl-row .iso{font-size:11px;color:var(--dim);margin-right:8px}
+.tl-sc{text-align:right}
+.tl-track{position:relative;display:block;align-self:stretch}
+.tl-bar{position:absolute;top:9px;height:8px;background:var(--text2);color:var(--text2);min-width:2px}
+.tl-bar.hot{background:var(--red-t);color:var(--red-t)}
+.tl-bar.before::before{content:"";position:absolute;left:-6px;top:0;border-top:4px solid transparent;
+  border-bottom:4px solid transparent;border-right:6px solid currentColor}
+.tl-axis{height:28px;border-top:none}
+.tl-axis .tl-tick{position:absolute;top:0;bottom:0}
+.tl-axis .tl-tick span{position:absolute;top:8px;left:6px;font-family:var(--mono);font-size:10px;letter-spacing:.3px;
+  color:var(--dim);white-space:nowrap}
+.tl-axis .tl-tick span.r{left:auto;right:6px}
+.tl-pins{height:22px}
+.tl-pin{position:absolute;top:4px;width:2px;height:14px;background:var(--red-t);cursor:pointer}
+.tl-pin::after{content:"";position:absolute;top:-3px;left:-3px;width:8px;height:8px;border-radius:50%;background:var(--red-t)}
+.tl-lines{position:absolute;top:0;bottom:0;left:calc(var(--tl-pad) + var(--tl-who) + var(--tl-gap));
+  right:calc(var(--tl-pad) + var(--tl-sc) + var(--tl-gap));pointer-events:none}
+.tl-lines .tl-tick{position:absolute;top:0;bottom:0;border-left:1px solid var(--rule-soft)}
+@media (max-width:1250px){
+  .findrow{grid-template-columns:1fr}
+  .tl-board{--tl-who:140px}
+  .tl-row{grid-template-columns:var(--tl-who) minmax(0,1fr)}
+  .tl-sc{display:none}
+  .tl-lines{right:var(--tl-pad)}
+}
+@media (max-width:900px){
+  .tl-board{--tl-who:112px;--tl-gap:10px;--tl-pad:14px}
+  .tl-legend{padding:10px 14px 11px}
+  .tl-row .iso{display:none}
+}
 .pw-rank{height:4px;background:var(--rule);margin:0 18px 14px}
 .pw-rank i{display:block;height:100%;background:var(--red-t)}
 .lk-try .lnk{margin-left:8px;font-size:11.5px}
@@ -935,10 +984,9 @@ details.smp[open] summary .ptitle::before{content:"- ";color:var(--label)}
       <nav class="subtabs intel" id="subtabs" aria-label="Threat intel sections">
         <a href="#intel" data-sub="overview" class="on">Overview</a>
         <a href="#intel-hosts" data-sub="hosts">Hosts</a>
+        <a href="#intel-timeline" data-sub="timeline">Timeline</a>
         <a href="#intel-behavior" data-sub="behavior">Behavior</a>
         <a href="#intel-urls" data-sub="urls">Malware URLs</a>
-        <a href="#intel-check" data-sub="check">Check an address</a>
-        <a href="#intel-download" data-sub="download">Download</a>
         <span class="sn"><span id="f-fresh">rebuilt every 5 minutes</span> &middot; TCP-verified sources only</span>
       </nav>
 
@@ -997,32 +1045,17 @@ details.smp[open] summary .ptitle::before{content:"- ";color:var(--label)}
           </div>
         </section>
 
-      <section class="blk">
+      <section class="blk" id="ov-get">
         <div class="phead"><span class="ptitle">Pull it into your tools</span><span class="pnote">no key, no signup &middot; CC BY 4.0</span></div>
-        <div class="fmts six">
-          <div class="fmt"><h4>TXT</h4><p>One address per line. For firewalls.</p>
-            <div class="fl"><a href="/feed/attackers-24h.txt" target="_blank" rel="noopener">24h</a>
-              <a href="/feed/attackers-7d.txt" target="_blank" rel="noopener">7d</a>
-              <a href="/feed/attackers-30d.txt" target="_blank" rel="noopener">30d</a></div></div>
-          <div class="fmt"><h4>JSON</h4><p>Full record per host, for SIEMs.</p>
-            <div class="fl"><a href="/feed/attackers-24h.json" target="_blank" rel="noopener">24h</a>
-              <a href="/feed/attackers-7d.json" target="_blank" rel="noopener">7d</a>
-              <a href="/feed/attackers-30d.json" target="_blank" rel="noopener">30d</a></div></div>
-          <div class="fmt"><h4>CSV</h4><p>The same columns for spreadsheets.</p>
-            <div class="fl"><a href="/feed/attackers-24h.csv" target="_blank" rel="noopener">24h</a>
-              <a href="/feed/attackers-7d.csv" target="_blank" rel="noopener">7d</a>
-              <a href="/feed/attackers-30d.csv" target="_blank" rel="noopener">30d</a></div></div>
-          <div class="fmt"><h4>STIX 2.1</h4><p>ATT&amp;CK and CVE references.</p>
-            <div class="fl"><a href="/feed/attackers-24h.stix.json" target="_blank" rel="noopener">24h</a>
-              <a href="/feed/attackers-7d.stix.json" target="_blank" rel="noopener">7d</a>
-              <a href="/feed/attackers-30d.stix.json" target="_blank" rel="noopener">30d</a></div></div>
-          <div class="fmt"><h4>TAXII 2.1 <em class="beta">beta</em></h4><p>Subscribe from a platform. Six collections.</p>
-            <div class="fl"><a href="/taxii2/" target="_blank" rel="noopener">discovery</a>
-              <button class="lnk" data-copy="https://{{site}}/taxii2/" data-glyph="&#10697;">copy URL</button></div></div>
-          <div class="fmt"><h4>Malware URLs <em class="beta">new</em></h4><p>Download addresses botnets asked for.</p>
-            <div class="fl"><a href="/feed/malware-urls-7d.txt" target="_blank" rel="noopener">txt</a>
-              <a href="/feed/malware-urls-7d.json" target="_blank" rel="noopener">json</a>
-              <a href="/feed/malware-urls-7d.stix.json" target="_blank" rel="noopener">stix</a></div></div>
+        <div class="fl fl-ov">
+          <a href="/feed/attackers-7d.txt" target="_blank" rel="noopener">TXT</a>
+          <a href="/feed/attackers-7d.json" target="_blank" rel="noopener">JSON</a>
+          <a href="/feed/attackers-7d.csv" target="_blank" rel="noopener">CSV</a>
+          <a href="/feed/attackers-7d.stix.json" target="_blank" rel="noopener">STIX 2.1</a>
+          <a href="/feed/misp/manifest.json" target="_blank" rel="noopener">MISP</a>
+          <a href="/taxii2/" target="_blank" rel="noopener">TAXII 2.1</a>
+          <a href="/feed/malware-urls-7d.txt" target="_blank" rel="noopener">Malware URLs</a>
+          <span class="fl-more">the 7 day files &middot; <a href="#use-download">every format and window &rarr;</a></span>
         </div>
         <div class="snip ovsnip"><code>$ curl -s https://{{site}}/feed/tag-persistent-7d.txt | grep -v '^#'</code>
           <button class="pact" data-copy="curl -s https://{{site}}/feed/tag-persistent-7d.txt | grep -v '^#'" data-glyph="&#10697;">copy</button></div>
@@ -1030,12 +1063,47 @@ details.smp[open] summary .ptitle::before{content:"- ";color:var(--label)}
 
       <div class="cta">
         <span>Have an address, or a whole log, to check against the feed?</span>
-        <a class="pact" href="#intel-check" data-glyph="&rarr;">Check it</a>
+        <a class="pact" href="#intel-hosts" data-glyph="&rarr;">Check it</a>
       </div>
 
       </div>
 
       <div class="sub" data-sub="hosts">
+        <div class="findrow" id="check">
+        <section class="blk lkblk">
+          <div class="phead"><span class="ptitle">Check any address</span>
+            <span class="pnote">is it on the feed, and why</span></div>
+          <form class="lk" id="lookup-form" autocomplete="off">
+            <input id="lookup-ip" type="text" inputmode="text" spellcheck="false"
+                   placeholder="Paste an IP address, IPv4 or IPv6" aria-label="IP address">
+            <button type="submit" class="pact" data-glyph="&rarr;">Look up</button>
+          </form>
+          <div class="lk-foot"><span class="lk-msg" id="lookup-msg">Is it on the feed, and if not, why not.</span>
+            <span class="lk-try">try <span id="lookup-try"></span></span></div>
+        </section>
+        <section class="blk" id="bulk">
+          <div class="phead"><span class="ptitle">Check a log</span>
+            <span class="pnote">an auth log, a firewall log, or a plain list of addresses</span></div>
+          <div class="bk">
+            <textarea id="bulk-text" rows="4" spellcheck="false"
+              placeholder="Paste a log or a list of IPs. The addresses are pulled out here, in your browser, so the log itself is never sent anywhere. Up to 200 unique addresses."></textarea>
+            <div class="bk-row">
+              <button class="pact" id="bulk-go" data-glyph="&rarr;">Check them</button>
+              <button class="pact" id="bulk-sample" data-glyph="&darr;">try a sample</button>
+              <span class="lk-msg" id="bulk-msg">Which of these are known attackers?</span>
+            </div>
+          </div>
+          <div id="bulk-out" hidden>
+            <div class="bk-sum" id="bulk-sum"></div>
+            <div class="blk-b" id="bulk-rows"></div>
+            <div class="blk-f"><span id="bulk-note"></span>
+              <span class="ev-acts">
+                <button class="pact" id="bulk-copy" data-glyph="&#10697;">copy the listed ones</button>
+                <button class="pact" id="bulk-csv" data-glyph="&darr;">download CSV</button>
+              </span></div>
+          </div>
+        </section>
+        </div>
         <section class="blk" id="hostlist">
           <div class="phead"><span class="ptitle">Every listed host</span>
             <span class="brief-range" id="wsel">
@@ -1064,6 +1132,30 @@ details.smp[open] summary .ptitle::before{content:"- ";color:var(--label)}
             <div class="blk-b" id="spread"></div>
           </section>
         </div>
+      </div>
+
+      <div class="sub" data-sub="timeline">
+        <section class="blk" id="tl">
+          <div class="phead"><span class="ptitle">The listed hosts, in time</span>
+            <span class="brief-range" id="tlsel">
+              <button class="tg" data-w="24h">24h</button>
+              <button class="tg on" data-w="7d">7d</button>
+              <button class="tg" data-w="30d">30d</button>
+            </span></div>
+          <div class="tl-legend">
+            <span><i class="tl-k"></i>a listed host, first event to last</span>
+            <span><i class="tl-k hot"></i>score 80 or more, or it delivered malware</span>
+            <span><i class="tl-k before"></i>already active when the window opened</span>
+            <span><i class="tl-k pin"></i>worth a look, last 24 hours</span>
+          </div>
+          <div class="tl-board">
+            <div class="tl-row tl-axis" id="tl-axis"></div>
+            <div class="tl-row tl-pins" id="tl-pins"></div>
+            <div id="tl-rows"><div class="blank" style="padding:14px 20px">Loading&hellip;</div></div>
+            <div class="tl-lines" id="tl-lines"></div>
+          </div>
+          <div class="pfoot"><span id="tl-note"></span> &middot; click a bar for the evidence, with the time of every event</div>
+        </section>
       </div>
 
       <div class="sub" data-sub="behavior">
@@ -1116,6 +1208,17 @@ details.smp[open] summary .ptitle::before{content:"- ";color:var(--label)}
             <div class="pwlen-x" id="pw-lenx"></div>
           </div>
         </section>
+      <section class="blk lkblk" id="pwcheck">
+        <div class="phead"><span class="ptitle">Has this password been tried here?</span>
+          <span class="pnote">checked in your browser, never sent</span></div>
+        <form class="lk" id="pw-form" autocomplete="off">
+          <input id="pw-in" type="text" inputmode="text" spellcheck="false" autocapitalize="off"
+                 placeholder="Type a password to look it up in the list of guesses" aria-label="Password to check">
+          <button type="submit" class="pact" data-glyph="&rarr;">Check</button>
+        </form>
+        <div class="lk-foot"><span class="lk-msg" id="pw-msg">The 20,000 most tried passwords are downloaded to your browser once, and the check runs there. Nothing you type leaves this page.</span></div>
+        <div class="pw-rank" id="pw-rank" hidden title=""><i></i></div>
+      </section>
 
       <section class="blk">
         <div class="phead"><span class="ptitle">Tool clusters</span>
@@ -1137,137 +1240,6 @@ details.smp[open] summary .ptitle::before{content:"- ";color:var(--label)}
 
       </div>
 
-      <div class="sub" data-sub="check">
-      <section class="blk lkblk">
-        <div class="phead"><span class="ptitle">Check any address</span>
-          <span class="pnote">is it on the feed, and why</span></div>
-        <form class="lk" id="lookup-form" autocomplete="off">
-          <input id="lookup-ip" type="text" inputmode="text" spellcheck="false"
-                 placeholder="Paste an IP address, IPv4 or IPv6" aria-label="IP address">
-          <button type="submit" class="pact" data-glyph="&rarr;">Look up</button>
-        </form>
-        <div class="lk-foot"><span class="lk-msg" id="lookup-msg">Is it on the feed, and if not, why not.</span>
-          <span class="lk-try">try <span id="lookup-try"></span></span></div>
-      </section>
-
-      <section class="blk" id="bulk">
-        <div class="phead"><span class="ptitle">Check a log</span>
-          <span class="pnote">an auth log, a firewall log, or a plain list of addresses</span></div>
-        <div class="bk">
-          <textarea id="bulk-text" rows="4" spellcheck="false"
-            placeholder="Paste a log or a list of IPs. The addresses are pulled out here, in your browser, so the log itself is never sent anywhere. Up to 200 unique addresses."></textarea>
-          <div class="bk-row">
-            <button class="pact" id="bulk-go" data-glyph="&rarr;">Check them</button>
-            <button class="pact" id="bulk-sample" data-glyph="&darr;">try a sample</button>
-            <span class="lk-msg" id="bulk-msg">Which of these are known attackers?</span>
-          </div>
-        </div>
-        <div id="bulk-out" hidden>
-          <div class="bk-sum" id="bulk-sum"></div>
-          <div class="blk-b" id="bulk-rows"></div>
-          <div class="blk-f"><span id="bulk-note"></span>
-            <span class="ev-acts">
-              <button class="pact" id="bulk-copy" data-glyph="&#10697;">copy the listed ones</button>
-              <button class="pact" id="bulk-csv" data-glyph="&darr;">download CSV</button>
-            </span></div>
-        </div>
-      </section>
-
-      <section class="blk lkblk" id="pwcheck">
-        <div class="phead"><span class="ptitle">Has this password been tried here?</span>
-          <span class="pnote">checked in your browser, never sent</span></div>
-        <form class="lk" id="pw-form" autocomplete="off">
-          <input id="pw-in" type="text" inputmode="text" spellcheck="false" autocapitalize="off"
-                 placeholder="Type a password to look it up in the list of guesses" aria-label="Password to check">
-          <button type="submit" class="pact" data-glyph="&rarr;">Check</button>
-        </form>
-        <div class="lk-foot"><span class="lk-msg" id="pw-msg">The 20,000 most tried passwords are downloaded to your browser once, and the check runs there. Nothing you type leaves this page.</span></div>
-        <div class="pw-rank" id="pw-rank" hidden title=""><i></i></div>
-      </section>
-      </div>
-
-      <div class="sub" data-sub="download">
-      <div class="sec-k" style="margin-top:0">Download</div>
-      <div class="fmts">
-        <div class="fmt"><h4>TXT</h4><p>One address per line. For firewalls and blocklists.</p>
-          <div class="fl"><a href="/feed/attackers-24h.txt" target="_blank" rel="noopener">24h</a>
-            <a href="/feed/attackers-7d.txt" target="_blank" rel="noopener">7d</a>
-            <a href="/feed/attackers-30d.txt" target="_blank" rel="noopener">30d</a></div></div>
-        <div class="fmt"><h4>JSON</h4><p>The full record for every host. For SIEMs and scripts.</p>
-          <div class="fl"><a href="/feed/attackers-24h.json" target="_blank" rel="noopener">24h</a>
-            <a href="/feed/attackers-7d.json" target="_blank" rel="noopener">7d</a>
-            <a href="/feed/attackers-30d.json" target="_blank" rel="noopener">30d</a></div></div>
-        <div class="fmt"><h4>CSV</h4><p>The same columns, for spreadsheets and quick pivots.</p>
-          <div class="fl"><a href="/feed/attackers-24h.csv" target="_blank" rel="noopener">24h</a>
-            <a href="/feed/attackers-7d.csv" target="_blank" rel="noopener">7d</a>
-            <a href="/feed/attackers-30d.csv" target="_blank" rel="noopener">30d</a></div></div>
-        <div class="fmt"><h4>STIX 2.1</h4><p>Indicators with ATT&amp;CK and CVE references. For threat intel platforms.</p>
-          <div class="fl"><a href="/feed/attackers-24h.stix.json" target="_blank" rel="noopener">24h</a>
-            <a href="/feed/attackers-7d.stix.json" target="_blank" rel="noopener">7d</a>
-            <a href="/feed/attackers-30d.stix.json" target="_blank" rel="noopener">30d</a></div></div>
-        <div class="fmt"><h4>MISP</h4><p>Add it as a feed and sync. Seven-day attacker list, with ATT&amp;CK.</p>
-          <div class="fl"><a href="/feed/misp/manifest.json" target="_blank" rel="noopener">manifest</a>
-            <button class="lnk" data-copy="https://{{site}}/feed/misp" data-glyph="&#10697;">copy URL</button></div></div>
-      </div>
-      <div class="fmts pair">
-        <div class="fmt"><h4>TAXII 2.1 <em class="beta">beta</em></h4><p>Subscribe from a threat intel platform instead of downloading files. Six collections, read-only, no key.</p>
-          <div class="fl"><a href="/taxii2/" target="_blank" rel="noopener">discovery</a>
-            <button class="lnk" data-copy="https://{{site}}/taxii2/" data-glyph="&#10697;">copy URL</button></div></div>
-        <div class="fmt"><h4>Malware URLs</h4><p>Download addresses attackers asked this server to fetch, taken from botnet exploit requests. Listed from what was asked for, nothing is fetched. The files hold the raw URL, because a proxy or DNS filter needs it; only the page shows them defanged.</p>
-          <div class="fl"><a href="/feed/malware-urls-24h.txt" target="_blank" rel="noopener">24h</a>
-            <a href="/feed/malware-urls-7d.txt" target="_blank" rel="noopener">7d</a>
-            <a href="/feed/malware-urls-30d.txt" target="_blank" rel="noopener">30d</a>
-            <a href="/feed/malware-urls-7d.json" target="_blank" rel="noopener">json</a>
-            <a href="/feed/malware-urls-7d.csv" target="_blank" rel="noopener">csv</a>
-            <a href="/feed/malware-urls-7d.stix.json" target="_blank" rel="noopener">stix</a></div></div>
-      </div>
-      <div class="fmts pair">
-        <div class="fmt"><h4>Defender formats</h4><p>The 7 day lists as an nftables set file, a Zeek intel file and a Suricata IP reputation list. Loaded into the real tools on 2026-10-03: nftables 1.0.9 in a live kernel (each list fills its own set, and a reload replaces it), Suricata in test mode with rules on both categories, and the Zeek intel framework. Still, watch it on a lab box before you block with it.</p>
-          <div class="fl"><a href="/feed/attackers-7d.nft" target="_blank" rel="noopener">nft</a>
-            <a href="/feed/attackers-7d.zeek.intel" target="_blank" rel="noopener">zeek</a>
-            <a href="/feed/attackers-7d.iprep.list" target="_blank" rel="noopener">iprep</a>
-            <a href="/feed/iprep-categories.txt" target="_blank" rel="noopener">iprep categories</a>
-            <a href="/feed/tag-persistent-7d.iprep.list" target="_blank" rel="noopener">persistent iprep</a>
-            <a href="/feed/tag-persistent-7d.nft" target="_blank" rel="noopener">persistent nft</a></div></div>
-        <div class="fmt"><h4>Worth a look, as a feed <em class="beta">new</em></h4><p>An Atom feed of the notable events only: exploits, control commands and malware download addresses first seen in the last day. Routine password guessing is never in it. Subscribe in a feed reader or pipe it into chat.</p>
-          <div class="fl"><a href="/feed/notable.atom" target="_blank" rel="noopener">notable.atom</a>
-            <button class="lnk" data-copy="https://{{site}}/feed/notable.atom" data-glyph="&#10697;">copy URL</button></div></div>
-      </div>
-      <section class="blk" style="margin-top:22px">
-        <div class="phead"><span class="ptitle">By behavior</span><span class="pnote">one list per tag, 7 days</span></div>
-        <table class="uses" id="curated"><tr><th>Tag</th><th>Means</th><th>Hosts</th><th>File</th></tr></table>
-      </section>
-      <p class="fine pad">Research scanners and Tor exits are separate lists, in txt, json and csv:
-        <a href="/feed/research-7d.txt" target="_blank" rel="noopener">research-7d</a> and
-        <a href="/feed/tor-7d.txt" target="_blank" rel="noopener">tor-7d</a>. A catalog of every file, with
-        counts, is at <a href="/feed/index.json" target="_blank" rel="noopener">/feed/index.json</a>.
-        Only want what changed since you last looked? Every list has a changes feed, and
-        <a href="#use-sync">there is a short script</a> that keeps a copy current with it.
-        Status and format changes are at <a href="/feed/status.json" target="_blank" rel="noopener">/feed/status.json</a>.</p>
-
-      <div class="snips">
-        <div class="snipl">Block list for a firewall</div>
-        <div class="snip"><code>curl -s https://{{site}}/feed/attackers-24h.txt | grep -v '^#'</code>
-          <button class="pact" data-copy="curl -s https://{{site}}/feed/attackers-24h.txt | grep -v '^#'" data-glyph="&#10697;">copy</button></div>
-        <div class="snipl">Only the high-confidence hosts</div>
-        <div class="snip"><code>curl -s https://{{site}}/feed/attackers-7d.json | jq -r '.indicators[] | select(.score &gt;= 60) | .ip'</code>
-          <button class="pact" data-copy="curl -s https://{{site}}/feed/attackers-7d.json | jq -r '.indicators[] | select(.score >= 60) | .ip'" data-glyph="&#10697;">copy</button></div>
-        <p class="fine">Send <code>If-None-Match</code> when you poll. A list that has not changed answers with a 304 and no
-          body. Wrong entry? Addresses get reassigned, so tell me and I will look. See the
-          <a href="#build-feed">About</a> tab. License: CC BY 4.0, use it and credit {{brand}}.</p>
-      </div>
-
-      <details class="blk smp" id="sample-box">
-        <summary class="phead"><span class="ptitle">See one record, as delivered</span><span class="pnote">one indicator from the 24h JSON</span></summary>
-        <div class="blk-b">
-          <div style="display:flex;justify-content:flex-end;margin-top:10px"><button class="pact" id="copy-sample" data-glyph="&#10697;">copy</button></div>
-          <pre class="code d" id="sample">loading&hellip;</pre>
-          <p class="fine">Every attacker in every JSON file looks like this. <code>score</code> runs 0 to 100 and is
-            explained on the <a href="#build-feed">About</a> tab. <code>attack_techniques</code> are MITRE ATT&amp;CK ids and
-            <code>cves</code> appears only when a request matches exactly one vulnerability.</p>
-        </div>
-      </details>
-      </div>
     </div>
   </main>
 
@@ -1300,7 +1272,7 @@ details.smp[open] summary .ptitle::before{content:"- ";color:var(--label)}
         <h1 class="pg-h st-h">I left a server open on purpose. Here is what knocked.</h1>
         <p class="pg-lead st-lead">Over a million connections in 50 days, turned into a threat feed you can load into a
           firewall or a threat intelligence platform. Nothing a visitor sends is ever executed.</p>
-        <div class="st-btns"><a class="st-go" href="#live">Watch it live &rarr;</a><a class="st-alt" href="#intel">Get the feed</a></div>
+        <div class="st-btns"><a class="st-go" href="#live">Watch it live &rarr;</a><a class="st-alt" href="#use-download">Get the feed</a></div>
         <div class="st-live"><i></i><span><b class="d" id="st-rate">&hellip;</b> connections a minute right now &middot; latest worth a look: <button class="lnk" type="button" id="st-look">nothing new this hour</button></span></div>
       </div>
       <section class="blk st-term" aria-label="Two commands">
@@ -1352,6 +1324,87 @@ details.smp[open] summary .ptitle::before{content:"- ";color:var(--label)}
           <td>Shodan, Censys and the like. Useful to explain noise in your logs. Blocking them helps nobody.</td></tr>
       </table>
     </section>
+
+    <div class="sec-k" id="use-download">Every format and window</div>
+    <div class="fmts">
+      <div class="fmt"><h4>TXT</h4><p>One address per line. For firewalls and blocklists.</p>
+        <div class="fl"><a href="/feed/attackers-24h.txt" target="_blank" rel="noopener">24h</a>
+          <a href="/feed/attackers-7d.txt" target="_blank" rel="noopener">7d</a>
+          <a href="/feed/attackers-30d.txt" target="_blank" rel="noopener">30d</a></div></div>
+      <div class="fmt"><h4>JSON</h4><p>The full record for every host. For SIEMs and scripts.</p>
+        <div class="fl"><a href="/feed/attackers-24h.json" target="_blank" rel="noopener">24h</a>
+          <a href="/feed/attackers-7d.json" target="_blank" rel="noopener">7d</a>
+          <a href="/feed/attackers-30d.json" target="_blank" rel="noopener">30d</a></div></div>
+      <div class="fmt"><h4>CSV</h4><p>The same columns, for spreadsheets and quick pivots.</p>
+        <div class="fl"><a href="/feed/attackers-24h.csv" target="_blank" rel="noopener">24h</a>
+          <a href="/feed/attackers-7d.csv" target="_blank" rel="noopener">7d</a>
+          <a href="/feed/attackers-30d.csv" target="_blank" rel="noopener">30d</a></div></div>
+      <div class="fmt"><h4>STIX 2.1</h4><p>Indicators with ATT&amp;CK and CVE references. For threat intel platforms.</p>
+        <div class="fl"><a href="/feed/attackers-24h.stix.json" target="_blank" rel="noopener">24h</a>
+          <a href="/feed/attackers-7d.stix.json" target="_blank" rel="noopener">7d</a>
+          <a href="/feed/attackers-30d.stix.json" target="_blank" rel="noopener">30d</a></div></div>
+      <div class="fmt"><h4>MISP</h4><p>Add it as a feed and sync. Seven-day attacker list, with ATT&amp;CK.</p>
+        <div class="fl"><a href="/feed/misp/manifest.json" target="_blank" rel="noopener">manifest</a>
+          <button class="lnk" data-copy="https://{{site}}/feed/misp" data-glyph="&#10697;">copy URL</button></div></div>
+    </div>
+    <div class="fmts pair">
+      <div class="fmt"><h4>TAXII 2.1 <em class="beta">beta</em></h4><p>Subscribe from a threat intel platform instead of downloading files. Six collections, read-only, no key.</p>
+        <div class="fl"><a href="/taxii2/" target="_blank" rel="noopener">discovery</a>
+          <button class="lnk" data-copy="https://{{site}}/taxii2/" data-glyph="&#10697;">copy URL</button></div></div>
+      <div class="fmt"><h4>Malware URLs</h4><p>Download addresses attackers asked this server to fetch, taken from botnet exploit requests. Listed from what was asked for, nothing is fetched. The files hold the raw URL, because a proxy or DNS filter needs it; only the page shows them defanged.</p>
+        <div class="fl"><a href="/feed/malware-urls-24h.txt" target="_blank" rel="noopener">24h</a>
+          <a href="/feed/malware-urls-7d.txt" target="_blank" rel="noopener">7d</a>
+          <a href="/feed/malware-urls-30d.txt" target="_blank" rel="noopener">30d</a>
+          <a href="/feed/malware-urls-7d.json" target="_blank" rel="noopener">json</a>
+          <a href="/feed/malware-urls-7d.csv" target="_blank" rel="noopener">csv</a>
+          <a href="/feed/malware-urls-7d.stix.json" target="_blank" rel="noopener">stix</a></div></div>
+    </div>
+    <div class="fmts pair">
+      <div class="fmt"><h4>Defender formats</h4><p>The 7 day lists as an nftables set file, a Zeek intel file and a Suricata IP reputation list. Loaded into the real tools on 2026-10-03: nftables 1.0.9 in a live kernel (each list fills its own set, and a reload replaces it), Suricata in test mode with rules on both categories, and the Zeek intel framework. Still, watch it on a lab box before you block with it.</p>
+        <div class="fl"><a href="/feed/attackers-7d.nft" target="_blank" rel="noopener">nft</a>
+          <a href="/feed/attackers-7d.zeek.intel" target="_blank" rel="noopener">zeek</a>
+          <a href="/feed/attackers-7d.iprep.list" target="_blank" rel="noopener">iprep</a>
+          <a href="/feed/iprep-categories.txt" target="_blank" rel="noopener">iprep categories</a>
+          <a href="/feed/tag-persistent-7d.iprep.list" target="_blank" rel="noopener">persistent iprep</a>
+          <a href="/feed/tag-persistent-7d.nft" target="_blank" rel="noopener">persistent nft</a></div></div>
+      <div class="fmt"><h4>Worth a look, as a feed <em class="beta">new</em></h4><p>An Atom feed of the notable events only: exploits, control commands and malware download addresses first seen in the last day. Routine password guessing is never in it. Subscribe in a feed reader or pipe it into chat.</p>
+        <div class="fl"><a href="/feed/notable.atom" target="_blank" rel="noopener">notable.atom</a>
+          <button class="lnk" data-copy="https://{{site}}/feed/notable.atom" data-glyph="&#10697;">copy URL</button></div></div>
+    </div>
+    <section class="blk" style="margin-top:22px">
+      <div class="phead"><span class="ptitle">By behavior</span><span class="pnote">one list per tag, 7 days</span></div>
+      <table class="uses" id="curated"><tr><th>Tag</th><th>Means</th><th>Hosts</th><th>File</th></tr></table>
+    </section>
+    <p class="fine pad">Research scanners and Tor exits are separate lists, in txt, json and csv:
+      <a href="/feed/research-7d.txt" target="_blank" rel="noopener">research-7d</a> and
+      <a href="/feed/tor-7d.txt" target="_blank" rel="noopener">tor-7d</a>. A catalog of every file, with
+      counts, is at <a href="/feed/index.json" target="_blank" rel="noopener">/feed/index.json</a>.
+      Only want what changed since you last looked? Every list has a changes feed, and
+      <a href="#use-sync">there is a short script</a> that keeps a copy current with it.
+      Status and format changes are at <a href="/feed/status.json" target="_blank" rel="noopener">/feed/status.json</a>.</p>
+
+    <div class="snips">
+      <div class="snipl">Block list for a firewall</div>
+      <div class="snip"><code>curl -s https://{{site}}/feed/attackers-24h.txt | grep -v '^#'</code>
+        <button class="pact" data-copy="curl -s https://{{site}}/feed/attackers-24h.txt | grep -v '^#'" data-glyph="&#10697;">copy</button></div>
+      <div class="snipl">Only the high-confidence hosts</div>
+      <div class="snip"><code>curl -s https://{{site}}/feed/attackers-7d.json | jq -r '.indicators[] | select(.score &gt;= 60) | .ip'</code>
+        <button class="pact" data-copy="curl -s https://{{site}}/feed/attackers-7d.json | jq -r '.indicators[] | select(.score >= 60) | .ip'" data-glyph="&#10697;">copy</button></div>
+      <p class="fine">Send <code>If-None-Match</code> when you poll. A list that has not changed answers with a 304 and no
+        body. Wrong entry? Addresses get reassigned, so tell me and I will look. See the
+        <a href="#build-feed">About</a> tab. License: CC BY 4.0, use it and credit {{brand}}.</p>
+    </div>
+
+    <details class="blk smp" id="sample-box">
+      <summary class="phead"><span class="ptitle">See one record, as delivered</span><span class="pnote">one indicator from the 24h JSON</span></summary>
+      <div class="blk-b">
+        <div style="display:flex;justify-content:flex-end;margin-top:10px"><button class="pact" id="copy-sample" data-glyph="&#10697;">copy</button></div>
+        <pre class="code d" id="sample">loading&hellip;</pre>
+        <p class="fine">Every attacker in every JSON file looks like this. <code>score</code> runs 0 to 100 and is
+          explained on the <a href="#build-feed">About</a> tab. <code>attack_techniques</code> are MITRE ATT&amp;CK ids and
+          <code>cves</code> appears only when a request matches exactly one vulnerability.</p>
+      </div>
+    </details>
     </div>
 
     <div class="sub" data-sub="firewall">
@@ -3731,10 +3784,20 @@ function hostRow(i, withNet){
     '<span class="ev d">' + nfmt(i.events) + "</span></div>";
 }
 
-// The catalog carries the top 15 per window; the Hosts tab wants them all, so it reads the list file
-// itself, once per window every few minutes.
+// The catalog carries the top 15 per window; the Hosts list and the Timeline want them all, so they
+// read the list file itself, once per window every few minutes, highest score first.
 const TOP_FILES = {};
 const TOP_MAX = 400;
+function hostList(win){
+  const have = TOP_FILES[win];
+  if(have && Date.now() - have.at < 300000) return Promise.resolve(have.rows);
+  return fetch("/feed/attackers-" + win + ".json").then(r => r.ok ? r.json() : Promise.reject()).then(d => {
+    const rows = (d.indicators || []).slice().sort((a, b) => (b.score || 0) - (a.score || 0) || (b.events || 0) - (a.events || 0));
+    TOP_FILES[win] = {at: Date.now(), rows};
+    return rows;
+  });
+}
+
 function drawTop(){
   const win = feedWin;
   $("#top-all").setAttribute("href", "/feed/attackers-" + win + ".json");
@@ -3747,16 +3810,100 @@ function drawTop(){
       '<div class="blank" style="padding:14px 20px">Nothing listed yet.</div>';
   };
   const have = TOP_FILES[win];
-  if(have && Date.now() - have.at < 300000){ paint(have.rows); return; }
-  const idx = IDX;
-  if(idx) paint((idx.top || {})[win] || []);                 // the first 15 at once, the rest when the file lands
-  else $("#top").innerHTML = '<div class="blank" style="padding:14px 20px">Loading\u2026</div>';
-  fetch("/feed/attackers-" + win + ".json").then(r => r.ok ? r.json() : Promise.reject()).then(d => {
-    const rows = (d.indicators || []).slice().sort((a, b) => (b.score || 0) - (a.score || 0) || (b.events || 0) - (a.events || 0));
-    TOP_FILES[win] = {at: Date.now(), rows};
-    paint(rows);
-  }).catch(() => {});
+  if(!have || Date.now() - have.at >= 300000){
+    const idx = IDX;
+    if(idx) paint((idx.top || {})[win] || []);               // the first 15 at once, the rest when the file lands
+    else $("#top").innerHTML = '<div class="blank" style="padding:14px 20px">Loading\u2026</div>';
+  }
+  hostList(win).then(paint).catch(() => {});
 }
+
+/* ============================== timeline ============================= */
+
+// One bar per listed host, first event to last, over a shared time axis. The same list file as
+// the Hosts tab; a click opens the same evidence drawer, where every event carries its own time.
+// Rows are the hosts that first appeared inside the window, highest score first; if that leaves
+// room, the highest-scoring hosts already active before the window fill it. Hosts answers "who
+// are the worst", this answers "who showed up, and how long did they stay". Drawn in order of
+// first sighting so the board reads as time.
+const TL_MAX = 80, TL_HOURS = {"24h": 24, "7d": 168, "30d": 720};
+let tlWin = "7d", tlReq = 0, TL_PINS = null;
+const tlHot = h => (Number(h.score) || 0) >= 80 || (h.tags || []).includes("malware-delivery");
+const tlLabel = t => TL_HOURS[tlWin] <= 24
+  ? String(new Date(t).getUTCHours()).padStart(2, "0") + ":00"
+  : new Date(t).toLocaleDateString("en-US", {month: "short", day: "numeric", timeZone: "UTC"});
+
+// Ticks sit on whole UTC hours (24h) or UTC midnights (7d, 30d), never on the window's edge.
+function tlTicks(start, now){
+  const hours = TL_HOURS[tlWin], step = (hours <= 24 ? 4 : hours <= 168 ? 24 : 120) * 3600000;
+  const out = [];
+  for(let t = Math.ceil(start / step) * step; t <= now; t += step) out.push(t);
+  return out;
+}
+
+function tlPins(){
+  if(TL_PINS && Date.now() - TL_PINS.at < 300000) return Promise.resolve(TL_PINS.items);
+  return fetch("/api/notables?hours=24").then(r => r.ok ? r.json() : Promise.reject()).then(d => {
+    // News only: a first sighting or a new dropper has a moment, "active now" is a pattern.
+    const items = (d.notables || []).filter(n => n.ts && n.tag !== "ACTIVE NOW");
+    TL_PINS = {at: Date.now(), items};
+    return items;
+  }).catch(() => []);
+}
+
+function drawTimeline(){
+  const win = tlWin, mine = ++tlReq;
+  $$("#tlsel .tg").forEach(b => b.classList.toggle("on", b.dataset.w === win));
+  Promise.all([hostList(win), tlPins()]).then(([rows, notes]) => {
+    if(mine !== tlReq) return;
+    const now = Date.now(), start = now - TL_HOURS[win] * 3600000, span = now - start;
+    const pct = t => Math.max(0, Math.min(100, (t - start) / span * 100)).toFixed(2);
+    const all = rows.map(h => ({...h, fs: Date.parse(h.first_seen) || 0, ls: Date.parse(h.last_seen) || 0})).filter(h => h.ls);
+    const arrived = all.filter(h => h.fs >= start), carried = all.filter(h => h.fs < start);   // rows are already by score
+    const hosts = arrived.slice(0, TL_MAX).concat(carried.slice(0, Math.max(0, TL_MAX - arrived.length)))
+      .sort((a, b) => a.fs - b.fs || a.ls - b.ls);
+    const ticks = tlTicks(start, now);
+    $("#tl-axis").innerHTML = '<span></span><span class="tl-track">' + ticks.map(t =>
+      '<i class="tl-tick" style="left:' + pct(t) + '%"><span>' + tlLabel(t) + "</span></i>").join("") + "</span>";
+    $("#tl-lines").innerHTML = ticks.map(t => '<i class="tl-tick" style="left:' + pct(t) + '%"></i>').join("");
+    // A label sits right of its line, or left of it when that would run off the track. Labels are
+    // measured left to right and one that would overlap the previous is dropped; the lines stay.
+    const trackW = $("#tl-axis .tl-track").clientWidth;
+    let edge = -Infinity;
+    $$("#tl-axis .tl-tick span").forEach(el => {
+      el.hidden = false;
+      const x = el.parentElement.offsetLeft, w = el.offsetWidth, flip = x + 6 + w > trackW;
+      el.classList.toggle("r", flip);
+      const left = flip ? x - 6 - w : x + 6;
+      if(left < edge + 10){ el.hidden = true; return; }
+      edge = left + w;
+    });
+    $("#tl-pins").innerHTML = '<span></span><span class="tl-track">' + notes.filter(n => n.ts * 1000 >= start).map(n =>
+      '<i class="tl-pin' + (n.ip ? " clk" : "") + '" role="button" tabindex="0"' + (n.ip ? ' data-ip="' + esc(n.ip) + '"' : "") +
+      ' style="left:' + pct(n.ts * 1000) + '%" title="' +
+      esc(n.title + " · " + stamp(n.ts) + " UTC" + (n.meta ? " · " + n.meta : "")) + '"></i>').join("") + "</span>";
+    $("#tl-rows").innerHTML = hosts.map(h => {
+      const sc = Number(h.score) || 0, hot = tlHot(h), before = h.fs && h.fs < start;
+      const l = pct(before ? start : h.fs || start), w = Math.max(0.4, pct(Math.min(h.ls, now)) - l).toFixed(2);
+      const what = (h.tags || []).slice(0, 4).join(" · ") || (h.protocols || []).join(", ");
+      return '<div class="tl-row clk" role="button" tabindex="0" data-ip="' + esc(h.ip) + '" title="' +
+        esc(h.ip + " · score " + sc + " · " + nfmt(h.events) + " events · " + stamp(h.fs / 1000) + " to " +
+            stamp(h.ls / 1000) + " UTC" + (what ? " · " + what : "")) + '">' +
+        '<span class="who d"><span class="iso">' + esc(h.country || "??") + "</span>" + esc(h.ip) + "</span>" +
+        '<span class="tl-track"><i class="tl-bar' + (hot ? " hot" : "") + (before ? " before" : "") +
+        '" style="left:' + l + "%;width:" + w + '%"></i></span>' +
+        '<span class="tl-sc d" style="color:' + (hot ? "var(--red-t)" : "var(--label)") + '">' + sc + "</span></div>";
+    }).join("") || '<div class="blank" style="padding:14px 20px">Nothing listed yet.</div>';
+    const hot = hosts.filter(tlHot).length, came = hosts.filter(h => h.fs >= start).length;
+    $("#tl-note").textContent = (hosts.length < rows.length ? hosts.length + " of " : "all ") + nfmt(rows.length) +
+      " hosts on the " + win + " list, highest score first: " + came + " arrived in the window" +
+      (hosts.length - came ? ", " + (hosts.length - came) + " already here" : "") + " · in order of first sighting" +
+      (hot ? " · " + hot + " in red" : "") + " · times are UTC";
+  }).catch(() => {
+    if(mine === tlReq) $("#tl-rows").innerHTML = '<div class="blank" style="padding:14px 20px">Could not load the feed.</div>';
+  });
+}
+$$("#tlsel .tg").forEach(b => { b.onclick = () => { tlWin = b.dataset.w; drawTimeline(); }; });
 
 function drawTopOv(idx){
   const rows = ((idx.top || {})["7d"] || []).slice(0, 5);
@@ -3792,19 +3939,22 @@ const TITLES = {
   build: "About · {{brand}}",
 };
 const VIEW_ALIASES = {feed: "intel", method: "build", about: "build"};   // old links keep working
+// A section that moved to another tab: the old link lands where its content is now.
+const LINK_ALIASES = {"intel-download": "use-download"};
 
 // Sections inside a tab. Each strip link carries a data-sub, each panel the same.
 // Aliases keep older links such as #intel-bulk landing in the right section, and
 // where an alias is also a scroll target (a heading) the page still scrolls to it.
 const SECTIONS = {
-  intel: ["overview", "hosts", "behavior", "urls", "check", "download"],
+  intel: ["overview", "hosts", "timeline", "behavior", "urls"],
   use: ["start", "firewall", "logs", "platform", "api"],
   build: ["how", "feed"],
 };
 const SUB_HOME = {intel: "overview", use: "start", build: "how"};
 const SUB_ALIASES = {
-  intel: {bulk: "check", lookup: "check", accuracy: "overview"},
-  use: {"use-firewall": "firewall", "use-logs": "logs", "use-platform": "platform", "use-api": "api"},
+  intel: {bulk: "hosts", lookup: "hosts", check: "hosts", accuracy: "overview"},
+  use: {"use-firewall": "firewall", "use-logs": "logs", "use-platform": "platform", "use-api": "api",
+        "use-download": "start"},
   build: {},
 };
 
@@ -3813,6 +3963,7 @@ function showSub(view, sub){
   root.querySelectorAll(".sub").forEach(p => p.classList.toggle("on", p.dataset.sub === sub));
   root.querySelectorAll(".subtabs a").forEach(a => a.classList.toggle("on", a.dataset.sub === sub));
   root.scrollTop = 0;
+  if(view === "intel" && sub === "timeline") drawTimeline();
 }
 
 function showView(name){
@@ -3822,6 +3973,7 @@ function showView(name){
     try{ evIp = decodeURIComponent(name.slice(3)); }catch(e){}
     name = "intel";
   }
+  name = LINK_ALIASES[name] || name;
   // #use-firewall and #intel-bulk open a view and scroll to a section in it.
   let anchor = null;
   const sec = /^(intel|use|build)-(.+)$/.exec(name);

@@ -32,6 +32,13 @@ class QuickstartConfigTests(unittest.TestCase):
         self.assertFalse(self.raw["classify"]["tor"])           # no download of the Tor list
         self.assertFalse(self.raw["services"][7].get("udp", True))   # SIP is TCP only here
 
+    def test_it_knocks_on_itself_and_the_example_for_a_real_sensor_does_not(self):
+        self.assertIs(self.raw["demo"], True)
+        example = yaml.safe_load((ROOT / "config.example.yaml").read_text(encoding="utf-8"))
+        self.assertNotIn("demo", example)
+        errors, _ = configcheck.check({**self.raw, "demo": "yes"})
+        self.assertIn("demo must be true or false", errors)
+
     def test_every_decoy_is_on_a_high_port(self):
         for svc in self.raw["services"]:
             self.assertGreaterEqual(svc["port"], 1024, svc)
@@ -51,18 +58,42 @@ class QuickstartConfigTests(unittest.TestCase):
         self.assertEqual(try_it.PORTS, want)
 
 
-@unittest.skipUnless((ROOT / "docker").is_dir(), "the container drafts are not part of the public export")
 class DockerFilesTests(unittest.TestCase):
-    """The container files are drafts nobody has built yet, so at least keep them consistent."""
+    """The image is built and run by hand (it needs Docker); these keep its files consistent with
+    each other and with the demo."""
 
     @classmethod
     def setUpClass(cls):
-        cls.config = yaml.safe_load((ROOT / "docker" / "config.docker.yaml").read_text(encoding="utf-8"))
-        cls.compose = yaml.safe_load((ROOT / "docker" / "docker-compose.yml").read_text(encoding="utf-8"))
+        cls.config = yaml.safe_load((ROOT / "config.docker.yaml").read_text(encoding="utf-8"))
+        cls.compose = yaml.safe_load((ROOT / "compose.yaml").read_text(encoding="utf-8"))
+        cls.dockerfile = (ROOT / "Dockerfile").read_text(encoding="utf-8")
+        cls.ignore = (ROOT / ".dockerignore").read_text(encoding="utf-8").split()
 
     def test_the_config_has_no_errors(self):
-        errors, _, _ = configcheck.check_file(ROOT / "docker" / "config.docker.yaml")
+        errors, _, _ = configcheck.check_file(ROOT / "config.docker.yaml")
         self.assertEqual(errors, [])
+
+    def test_the_builder_gets_everything_the_package_is_built_from_and_nothing_else(self):
+        import tomllib
+        project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+        carried = project["tool"]["hatch"]["build"]["targets"]["wheel"]["force-include"]
+        self.assertIn("*", self.ignore)                       # everything is left out, then let back in by name
+        for needed in [*carried, "uninvited", "pyproject.toml", "requirements.txt", project["project"]["readme"],
+                       "config.docker.yaml"]:
+            self.assertIn("!" + needed, self.ignore, needed)
+        for kept_out in ("config.yaml", ".git", "tests", "deploy", "docs"):
+            self.assertNotIn("!" + kept_out, self.ignore)
+
+    def test_the_image_runs_the_installed_command_as_an_unprivileged_user(self):
+        self.assertIn('CMD ["uninvited", "--config", "/etc/uninvited/config.yaml"]', self.dockerfile)
+        self.assertIn("config.docker.yaml /etc/uninvited/config.yaml", self.dockerfile)
+        self.assertLess(self.dockerfile.index("USER uninvited"), self.dockerfile.index("CMD ["))
+        self.assertEqual(self.config["database"].rsplit("/", 1)[0], "/data")
+        self.assertIn("VOLUME /data", self.dockerfile)
+
+    def test_it_is_the_demo_with_decoys_docker_can_publish(self):
+        self.assertIs(self.config["demo"], True)
+        self.assertEqual(self.config["listen_ip"], "0.0.0.0")
 
     def test_the_ports_published_are_the_ports_the_decoys_use(self):
         published = [p.split(":") for p in self.compose["services"]["uninvited"]["ports"]]

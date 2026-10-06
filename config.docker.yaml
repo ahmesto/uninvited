@@ -1,0 +1,52 @@
+# The configuration inside the container image (see Dockerfile). It is the two-minute demo with
+# two differences: the decoys listen on every interface of the container, so Docker can publish
+# them (compose.yaml publishes them on the host's loopback only), and the data lives in /data.
+#
+# For a real sensor, write your own config and mount it over this one: docs/RUNNING.md, "With Docker".
+
+listen_ip: 0.0.0.0
+
+# Knock on every decoy once at start, from inside the container, so the dashboard has something
+# to show. Leave this out of a real sensor's config.
+demo: true
+
+dashboard:
+  host: 0.0.0.0
+  port: 8090
+
+database: /data/uninvited.db
+ssh_host_key: /data/ssh_host_rsa_key
+retention_days: 7
+max_connections: 100
+
+geoip:
+  city_db: ""
+  asn_db: ""
+
+classify:
+  rdns: false      # no outbound DNS from the demo
+  tor: false       # no download of the Tor exit list
+
+site:
+  title: Uninvited
+  tagline: a server left open on purpose
+  url: 127.0.0.1:8090
+
+services:
+  - {proto: SSH, port: 2222}
+  - {proto: TNET, port: 2323}
+  - {proto: FTP, port: 2121}
+  - {proto: HTTP, port: 8081}
+  - {proto: SMTP, port: 2525}
+  - {proto: RDP, port: 33890}
+  - {proto: SMB, port: 4445}
+  - {proto: SIP, port: 5060, udp: false}
+  - {proto: MODBUS, port: 5020}
+  - {proto: S7, port: 5102}
+  - {proto: ENIP, port: 44818}
+  - {proto: DNP3, port: 20001}
+  - {proto: CAM, port: 8083, service: web}
+  - {proto: CAM, port: 8554, service: rtsp}
+  - {proto: ROUTER, port: 8084, service: web}
+  - {proto: ROUTER, port: 7547, service: tr069}
+  - {proto: MCP, port: 8085}

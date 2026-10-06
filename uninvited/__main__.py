@@ -1,20 +1,24 @@
-"""uninvited entrypoint: python -m uninvited --config config.yaml"""
+"""uninvited entrypoint: python -m uninvited --config config.yaml, or --demo to try it."""
 from __future__ import annotations
 
 import argparse
 import asyncio
 import contextlib
+import importlib.util
 import logging
 import os
 import signal
+import socket
 import sys
+import threading
+import time
 
 import uvicorn
 
 from . import intel
 from .app import Hub, build_app
 from .classify import Classifier, is_mirai_pair
-from .core import Knock, load_config
+from .core import Knock, load_config, shipped
 from .feeds import REFRESH_SECONDS, FeedCache
 from .identity import Identity
 from .geo import Geo
@@ -189,16 +193,61 @@ async def run(config_path: str) -> None:
     store.close()
 
 
+def try_it():
+    """The knocking tool, loaded from wherever it shipped."""
+    spec = importlib.util.spec_from_file_location("uninvited_try_it", shipped("try_it.py", "tools/try_it.py"))
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def first_visitors(port: int) -> None:
+    """A demo's own visitors (demo: true in the config). Once the dashboard answers, every
+    decoy gets one harmless knock from this machine, so the page has something to show."""
+    for _ in range(120):
+        time.sleep(0.5)
+        try:
+            socket.create_connection(("127.0.0.1", port), timeout=1).close()
+            break
+        except OSError:
+            continue
+    else:
+        return
+    answered = try_it().knock("127.0.0.1", say=lambda _line: None)
+    log.info("demo: %d decoys answered a test knock. Open http://127.0.0.1:%d/", answered, port)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(prog="uninvited")
     parser.add_argument("-c", "--config", default="config.yaml")
+    parser.add_argument("--demo", action="store_true",
+                        help="try it on this machine with the config that ships for it: every decoy on 127.0.0.1, "
+                             "nothing reachable from outside, and one round of harmless test knocks at start")
+    parser.add_argument("--knock", action="store_true",
+                        help="knock on every decoy of a running demo again, then exit")
+    parser.add_argument("--example-config", action="store_true",
+                        help="print the commented example config and exit (uninvited --example-config > config.yaml)")
     parser.add_argument("--check", action="store_true",
                         help="check the config file and exit (0 = fine, 1 = errors); "
                              "run it before restarting the service with a changed file")
     args = parser.parse_args()
+    if args.knock:
+        sys.exit(try_it().main([]))
+    if args.example_config:
+        sys.stdout.write(shipped("example.yaml", "config.example.yaml").read_text(encoding="utf-8"))
+        return
+    if args.demo:
+        args.config = str(shipped("quickstart.yaml", "config.quickstart.yaml"))
     if args.check:
         from .configcheck import report
         sys.exit(report(args.config))
+    if not os.path.isfile(args.config):
+        sys.exit(f"No config file at {args.config}. To try it on this machine: uninvited --demo\n"
+                 "For a real sensor: uninvited --example-config > config.yaml, edit it, "
+                 "then uninvited --config config.yaml")
+    cfg = load_config(args.config)
+    if cfg.get("demo"):
+        threading.Thread(target=first_visitors, args=(int(cfg["dashboard"]["port"]),), daemon=True).start()
     try:
         asyncio.run(run(args.config))
     except KeyboardInterrupt:

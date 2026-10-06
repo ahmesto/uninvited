@@ -26,8 +26,8 @@ round trip.
 python -m venv .venv && . .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r requirements-dev.txt
 python -m unittest discover tests                    # about a minute and a half
-python -m uninvited --config config.quickstart.yaml     # a local instance on loopback
-python tools/try_it.py                               # knock on every decoy
+python -m uninvited --demo                           # a local instance on loopback, knocked on once
+python -m uninvited --knock                          # knock on every decoy again
 ```
 
 `FUZZ_CASES=300 python -m unittest tests.test_fuzz` runs the fuzz harness harder. `python -m uninvited --check -c <file>`

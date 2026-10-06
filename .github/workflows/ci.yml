@@ -29,6 +29,51 @@ jobs:
       - name: Shell scripts parse
         run: for f in deploy/*.sh; do bash -n "$f"; done
 
+  install:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Install it the way a stranger would
+        run: pip install .
+      - name: The installed command runs the demo from an empty folder
+        run: |
+          mkdir "$RUNNER_TEMP/demo" && cd "$RUNNER_TEMP/demo"
+          uninvited --demo > demo.log 2>&1 &
+          for _ in $(seq 1 60); do curl -fsS -o /dev/null http://127.0.0.1:8090/api/split && break; sleep 1; done
+          curl -fsS http://127.0.0.1:8090/ | grep -q "<title>"
+          curl -fsS -o /dev/null http://127.0.0.1:8090/static/vendor/flags/nl.png
+          uninvited --knock | tee knock.log
+          grep -Eq "^([0-9]+) of \1 decoys answered" knock.log
+          uninvited --example-config > config.yaml
+          uninvited --check -c config.yaml
+      - name: What the demo logged, if that failed
+        if: failure()
+        run: cat "$RUNNER_TEMP/demo/demo.log"
+
+  docker:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build the image and start the demo
+        run: docker compose up -d --build
+      - name: The demo answers and has knocked on its own decoys
+        run: |
+          for _ in $(seq 1 60); do curl -fsS -o /dev/null http://127.0.0.1:8090/api/split && break; sleep 1; done
+          curl -fsS http://127.0.0.1:8090/ | grep -q "<title>"
+          total=0
+          for _ in $(seq 1 60); do
+            total=$(curl -fsS http://127.0.0.1:8090/api/stats | python3 -c "import json,sys; print(json.load(sys.stdin)['total'])")
+            [ "$total" -ge 17 ] && break
+            sleep 1
+          done
+          [ "$total" -ge 17 ]
+      - name: The container log, if that failed
+        if: failure()
+        run: docker compose logs
+
   secrets:
     runs-on: ubuntu-24.04
     steps:

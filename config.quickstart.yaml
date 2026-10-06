@@ -2,23 +2,28 @@
 # every decoy listens on 127.0.0.1 on a high port, the dashboard is on loopback, DNS lookups
 # and the Tor list download are off, and no GeoIP database is needed (locations show as unknown).
 #
-#   pip install -r requirements.txt
-#   python -m uninvited --config config.quickstart.yaml      # leave it running
-#   python tools/try_it.py                                # in a second terminal: knocks on every decoy
+#   uninvited --demo        # runs this file, then knocks on every decoy once
+#   uninvited --knock       # in a second terminal, to knock again
 #
-# Then open http://127.0.0.1:8090/ and watch the traffic arrive.
+# Then open http://127.0.0.1:8090/ and watch the traffic arrive. From a clone that has not been
+# installed, the same two commands are python -m uninvited --demo and python -m uninvited --knock.
+# What the demo records is kept in a folder called uninvited-demo, in the folder you start it from.
 #
 # This is a demo, not a deployment. To put decoys on the internet read docs/RUNNING.md and
 # docs/SECURITY-MODEL.md first: the machine that runs them must be one you can lose.
 
 listen_ip: 127.0.0.1
 
+# Knock on every decoy once at start, so the dashboard has something to show.
+# Leave this out of a real sensor's config.
+demo: true
+
 dashboard:
   host: 127.0.0.1
   port: 8090
 
-database: ./data/quickstart.db
-ssh_host_key: ./data/ssh_host_rsa_key
+database: ./uninvited-demo/demo.db
+ssh_host_key: ./uninvited-demo/ssh_host_rsa_key
 retention_days: 7
 max_connections: 100
 

@@ -11,7 +11,7 @@ Please report privately, not in a public issue:
 - the contact in the `security.txt` of the reference instance, served at `/.well-known/security.txt`.
 
 Include what you found, how to reproduce it (a request, a byte string, a config) and what you think the impact is. A
-proof of concept that runs against a local instance (`python -m uninvited --config config.quickstart.yaml`) is ideal.
+proof of concept that runs against a local instance (`python -m uninvited --demo`) is ideal.
 
 I will acknowledge within a few days, tell you what I plan to do, and credit you in the fix unless you prefer otherwise.
 This is a personal project, so there is no bug bounty and no formal SLA, but a report that shows a way to make a decoy

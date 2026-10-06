@@ -29,17 +29,18 @@ those too.
 You need Python 3.12. Nothing is reachable from outside your machine.
 
 ```
-pip install -r requirements.txt
-python -m uninvited --config config.quickstart.yaml
+pipx install git+https://github.com/ahmesto/uninvited
+uninvited --demo
 ```
 
-In a second terminal, knock on every decoy:
+Open http://127.0.0.1:8090/. The demo knocks on its own decoys once, so the page has something to show. Run
+`uninvited --knock` in a second terminal to do it again.
 
-```
-python tools/try_it.py
-```
+No pipx? `pip install git+https://github.com/ahmesto/uninvited` inside a virtual environment is the same thing. From a clone
+it runs without installing: `pip install -r requirements.txt`, then `python -m uninvited --demo`.
 
-Open http://127.0.0.1:8090/ and watch it arrive.
+Prefer Docker? From a clone, `docker compose up` builds the image and starts the same demo, published on your own machine
+only.
 
 ## Put it on the internet
 

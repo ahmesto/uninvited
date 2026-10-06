@@ -1,6 +1,6 @@
 # Running it for real
 
-The two-minute demo (`config.quickstart.yaml`) is safe by construction: everything on loopback, no outbound traffic. This
+The two-minute demo (`uninvited --demo`, which runs `config.quickstart.yaml`) is safe by construction: everything on loopback, no outbound traffic. This
 page is about putting decoys where the internet can reach them. Read [SECURITY-MODEL.md](SECURITY-MODEL.md) first. The
 short version: use a machine you can lose, on a network segment that cannot reach anything you care about.
 
@@ -43,6 +43,7 @@ Start from `config.example.yaml`; every key is explained in it. The ones that ma
 | `services` | One block per decoy. `enabled: false` turns one off. Industrial, camera, router and AI decoys ship off. |
 | `classify.rdns`, `classify.tor` | Turn off the reverse DNS lookups and the Tor exit list download if you want no outbound traffic from the process. Without reverse DNS, research scanners are only recognised by address range. |
 | `max_connections`, `retention_days` | The concurrent connection ceiling and how long raw events are kept. |
+| `demo` | Only in the demo configs: knock on every decoy once at start, so the dashboard has something to show. Leave it out. |
 
 **Check a configuration before you start the service with it.** A stray space once took a deployment down:
 
@@ -64,6 +65,33 @@ journalctl -u uninvited -f
 The unit runs it as its own user with no capabilities and a read-only file system. The decoys listen on high ports. Get the
 well-known ports to them at your gateway (forward WAN 22 to the decoy's 2222, and so on), or with an nftables redirect
 on the machine if you would rather translate there. If you forward port 22, your real SSH daemon must be somewhere else.
+
+## With Docker, instead of steps 1 and 3
+
+`docker build -t uninvited .` builds the image from a clone. It runs as an unprivileged user and keeps everything it
+records in `/data`. Out of the box it runs the demo. A real sensor mounts its own config over the built-in one and
+publishes each decoy on the port scanners look for:
+
+```
+docker run -d --name uninvited --restart unless-stopped \
+  --read-only --tmpfs /tmp --cap-drop ALL --security-opt no-new-privileges:true \
+  -v "$PWD/config.yaml:/etc/uninvited/config.yaml:ro" -v uninvited-data:/data \
+  -p 127.0.0.1:8090:8090 -p 22:2222 -p 23:2323 \
+  uninvited
+```
+
+In that config keep `listen_ip` and `dashboard.host` at `0.0.0.0`: they are addresses inside the container, and the `-p`
+flags decide what the outside can reach. The dashboard's stays on loopback, as above. Put `database` and `ssh_host_key`
+under `/data`, mount the GeoLite2 databases if you use them, and leave `demo` out. Check the file before you start:
+
+```
+docker run --rm -v "$PWD/config.yaml:/etc/uninvited/config.yaml:ro" uninvited uninvited --check -c /etc/uninvited/config.yaml
+```
+
+Two things to know. Docker on Linux normally hands the decoys the visitor's real address. Docker Desktop on Windows and
+macOS does not: every visitor shows up as Docker's own gateway address, which makes the lists worthless. So run a real
+sensor on Linux, and confirm it with one connection from another machine: the dashboard should show the address you
+came from. And step 4 still applies: the container limits what the process can touch, not what the machine can reach.
 
 ## 4. Contain it
 

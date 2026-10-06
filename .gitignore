@@ -5,6 +5,7 @@ __pycache__/
 
 # Captured attacker data and anything that could hold credentials
 data/
+uninvited-demo/
 *.db
 *.db-wal
 *.db-shm

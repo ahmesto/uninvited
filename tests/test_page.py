@@ -91,16 +91,18 @@ class SectionTests(unittest.TestCase):
             self.assertIn(f'<a href="#{"use" if name == "use" else name}" data-sub="{TABS[name]}" class="on"', body)
 
     def test_threat_intel_sections_hold_what_they_should(self):
+        """Five sections since 2026-10-05: the Check tools folded into Hosts and Behavior, Download
+        moved to the Use it tab, and the Timeline took its place."""
         want = {
-            "overview": ["acc-a1", 'id="top-ov"', 'id="urls-ov"', 'id="svc-bar"', 'class="fmts six"',
+            "overview": ["acc-a1", 'id="top-ov"', 'id="urls-ov"', 'id="svc-bar"', 'id="ov-get"',
                          'id="ibrief"', 'class="pg-h"', 'class="pg-lead"'],
-            "hosts": ['id="top"', 'id="nets"', 'id="geo"', 'id="spread"', 'id="wsel"'],
-            "behavior": ['id="techs"', 'id="tagbars"', 'id="cves"', 'id="icamp"',
-                         'id="emerging"', 'id="hm-attack"', 'id="pw-grid"', "What they do", "How they do it"],
+            "hosts": ['id="check"', 'id="lookup-form"', 'id="bulk-go"', 'id="bulk-out"',
+                      'id="top"', 'id="nets"', 'id="geo"', 'id="spread"', 'id="wsel"'],
+            "timeline": ['id="tlsel"', 'id="tl-axis"', 'id="tl-pins"', 'id="tl-rows"', 'id="tl-lines"', 'id="tl-note"',
+                         "score 80 or more", "last 24 hours"],
+            "behavior": ['id="techs"', 'id="tagbars"', 'id="cves"', 'id="icamp"', 'id="emerging"', 'id="hm-attack"',
+                         'id="pw-grid"', 'id="pw-form"', 'id="pw-rank"', "What they do", "How they do it"],
             "urls": ['id="urls"'],
-            "check": ['id="lookup-form"', 'id="bulk-go"', 'id="pw-form"', 'id="pw-rank"'],
-            "download": ['id="sample"', 'id="sample-box"', 'id="curated"', 'class="fmts"', 'class="snips"',
-                         "/feed/notable.atom", "/feed/attackers-7d.nft"],
         }
         for name, needles in want.items():
             body = panel("intel", name)
@@ -109,17 +111,45 @@ class SectionTests(unittest.TestCase):
         # the audit (2026-10-03) removed the duplicates: the indicator row and the New here? strip on
         # the overview, the second host table style, and the headline is on the overview only
         intel = view("intel")
-        for gone in ('class="kpis"', 'class="usebar"', 'id="k-24"', 'class="trow'):
+        for gone in ('class="kpis"', 'class="usebar"', 'id="k-24"', 'class="trow', 'class="fmts'):
             self.assertNotIn(gone, intel, gone)
         self.assertEqual(intel.count('class="pg-h"'), 1)
         self.assertIn('class="pg-h"', panel("intel", "overview"))
-        # the tiles come before the folded sample record on the download tab
-        dl = panel("intel", "download")
-        self.assertLess(dl.index('class="fmts"'), dl.index('id="sample-box"'))
+        # the lookup and the log checker sit above the host list; the password check under the password shapes
+        hosts, behavior = panel("intel", "hosts"), panel("intel", "behavior")
+        self.assertLess(hosts.index('id="bulk"'), hosts.index('id="hostlist"'))
+        self.assertLess(behavior.index('id="pwshape"'), behavior.index('id="pwcheck"'))
+        # the overview points at the tools and the formats where they live now
+        self.assertIn('href="#intel-hosts" data-glyph="&rarr;">Check it</a>', panel("intel", "overview"))
+        self.assertIn('href="#use-download"', panel("intel", "overview"))
+
+    def test_the_timeline_reads_what_the_hosts_list_reads_and_opens_the_same_drawer(self):
+        """No new endpoint and nothing newly published: the bars come from the list file the Hosts
+        section already reads, the pins from the notables the Live screen already shows, and a bar
+        is a .clk[data-ip] row, so the shared click handler opens the evidence drawer with each
+        event's own time."""
+        self.assertIn("function hostList(win)", PAGE)
+        self.assertIn("function drawTimeline()", PAGE)
+        tl = PAGE[PAGE.index("function drawTimeline()"):]
+        tl = tl[:tl.index('$$("#tlsel .tg").forEach(b => { b.onclick')]
+        self.assertIn("hostList(win)", tl)
+        self.assertIn('class="tl-row clk" role="button" tabindex="0" data-ip=', tl)
+        self.assertIn('"/api/notables?hours=24"', PAGE)
+        self.assertNotIn("/feed/notable.atom", tl)                      # same origin, so the API, not the atom
+        self.assertNotIn("/api/timeline", tl)                            # that one is the Live screen's hourly bars
+        self.assertEqual(PAGE.count('fetch("/feed/attackers-" + win + ".json")'), 1)   # one loader, one cache
+        self.assertIn('if(view === "intel" && sub === "timeline") drawTimeline();', PAGE)
+        # grey by default, red only for the strongest: the legend says what the code does
+        self.assertIn('>= 80 || (h.tags || []).includes("malware-delivery")', PAGE)
+        # rows are the arrivals in the window, persisters only fill the rest (review of 2026-10-05: by score
+        # alone every bar was a persister pinned to the left edge, and the axis did no work)
+        self.assertIn("const arrived = all.filter(h => h.fs >= start), carried = all.filter(h => h.fs < start);", tl)
+        self.assertIn("arrived in the window", tl)
 
     def test_use_it_sections_hold_what_they_should(self):
         want = {
-            "start": ["Which list should I use?"],
+            "start": ["Which list should I use?", 'id="use-download"', 'id="sample"', 'id="sample-box"', 'id="curated"',
+                      'class="fmts"', 'class="snips"', "/feed/notable.atom", "/feed/attackers-7d.nft", "/feed/misp/manifest.json"],
             "firewall": ['id="use-firewall"', "pfSense and OPNsense", "nftables"],
             "logs": ['id="use-logs"', "The log checker", "jq"],
             "platform": ['id="use-platform"', "MISP", "STIX 2.1", "Splunk"],
@@ -129,6 +159,12 @@ class SectionTests(unittest.TestCase):
             body = panel("use", name)
             for n in needles:
                 self.assertIn(n, body, f"{n} should be in the {name} section")
+        # which list first, then the tiles, then the folded sample record
+        start = panel("use", "start")
+        self.assertLess(start.index("Which list should I use?"), start.index('id="use-download"'))
+        self.assertLess(start.index('class="fmts"'), start.index('id="sample-box"'))
+        self.assertEqual(PAGE.count('class="fmts"'), 1)                 # the tiles live here and nowhere else
+        self.assertIn('href="#use-download">Get the feed</a>', view("use"))
 
     def test_use_it_has_one_navigation_and_no_repeat_of_about(self):
         use = view("use")
@@ -157,10 +193,16 @@ class SectionTests(unittest.TestCase):
         """Links written before the split must land somewhere real."""
         aliases = PAGE[PAGE.index("const SUB_ALIASES"):]
         aliases = aliases[:aliases.index("};")]
-        for alias in ("bulk", "lookup", "accuracy", '"use-firewall"', '"use-logs"', '"use-platform"', '"use-api"'):
+        for alias in ("bulk", "lookup", "check", "accuracy", '"use-firewall"', '"use-logs"', '"use-platform"', '"use-api"',
+                      '"use-download"'):
             self.assertIn(alias, aliases)
         self.assertIn('href="#intel-bulk"', PAGE)            # the Use it tab links to it
         self.assertIn('id="bulk"', PAGE)
+        self.assertIn('id="check"', PAGE)                     # #intel-check scrolls to the tools in Hosts
+        # a section that moved tabs: #intel-download opens Use it at the formats
+        self.assertIn('const LINK_ALIASES = {"intel-download": "use-download"};', PAGE)
+        self.assertIn("name = LINK_ALIASES[name] || name;", PAGE)
+        self.assertIn('id="use-download"', PAGE)
         for old in ("feed", "method", "about"):
             self.assertIn(f'{old}: ', PAGE[PAGE.index("const VIEW_ALIASES"):][:200])
 
@@ -168,7 +210,7 @@ class SectionTests(unittest.TestCase):
         """Every in-page #intel-x, #use-x and #build-x link must resolve to a section or an element."""
         ids = set(re.findall(r'\bid="([^"]+)"', PAGE))
         subs = {n: set(re.findall(r'data-sub="(\w+)"', view(n))) for n in TABS}
-        aliases = {"intel": {"bulk", "lookup", "accuracy"}, "use": set(), "build": set()}
+        aliases = {"intel": {"bulk", "lookup", "accuracy", "check"}, "use": {"download"}, "build": set()}
         for href in set(re.findall(r'href="#((?:intel|use|build)-[\w-]+)"', PAGE)):
             tab, rest = href.split("-", 1)
             ok = (rest in subs[tab] or rest in aliases[tab] or href in ids or rest in ids)

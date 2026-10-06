@@ -27,7 +27,7 @@ from .identity import Identity
 
 TOP_KEYS = {
     "listen_ip", "database", "ssh_host_key", "retention_days", "max_connections",
-    "feed_size", "board_size", "dashboard", "feed", "geoip", "site", "services", "classify",
+    "feed_size", "board_size", "dashboard", "feed", "geoip", "site", "services", "classify", "demo",
 }
 NESTED_KEYS = {
     "dashboard": {"host", "port", "hide"},
@@ -123,6 +123,8 @@ def check(raw: dict) -> tuple[list[str], list[str]]:
 
     if "listen_ip" in raw and not _is_address(raw["listen_ip"]):
         errors.append(f"listen_ip '{raw['listen_ip']}' is not an IP address")
+    if not isinstance(raw.get("demo", False), bool):
+        errors.append("demo must be true or false")
     for key in ("retention_days", "max_connections", "feed_size", "board_size"):
         value = raw.get(key)
         if value is not None and (not isinstance(value, int) or isinstance(value, bool) or value < 0):

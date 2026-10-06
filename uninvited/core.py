@@ -8,6 +8,17 @@ from typing import Any
 
 import yaml
 
+HERE = Path(__file__).resolve().parent
+
+
+def shipped(inside: str, beside: str, here: Path = HERE) -> Path:
+    """A file that ships with the code. In a checkout and on a deployed server it sits beside
+    the package (static/, config.quickstart.yaml, tools/try_it.py). A pip install has no
+    "beside", so the wheel carries it inside the package: pyproject.toml says where."""
+    path = here / inside
+    return path if path.exists() else here.parent / beside
+
+
 # Panel colours, keyed by protocol tag. ALL is the neutral/aggregate colour.
 PROTO_COLORS = {
     "ALL": "#9ca3af",
