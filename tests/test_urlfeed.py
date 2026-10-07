@@ -103,7 +103,9 @@ class RuleTests(Base):
         self.deliver("175.107.3.233", MOZI, ago=3600 * 40)                       # last 7 days, not 24h
         self.deliver("45.9.148.5", "http://45.9.148.5/new.sh", ago=60)           # both
         old = "http://45.9.148.9/old.sh"
-        self.deliver("45.9.148.9", old, ago=3600 * 24 * 20)                      # only 30 days
+        self.deliver("45.9.148.9", old, ago=3600 * 24 * 10)                      # only 30 days
+        expired = "http://45.9.148.10/gone.sh"
+        self.deliver("45.9.148.10", expired, ago=3600 * 24 * 20)                 # past its 14 day expiry
         cache = self.build()
         self.assertEqual(self.listed(cache, "malware-urls-24h"), ["http://45.9.148.5/new.sh"])
         self.assertEqual(set(self.listed(cache, "malware-urls-7d")), {MOZI, "http://45.9.148.5/new.sh"})
@@ -174,6 +176,13 @@ class FileTests(Base):
         self.assertEqual(list(mozi.labels), ["malware-delivery", "mozi"])
         self.assertEqual(mozi.external_references[0].external_id, "T1105")
         self.assertIn("The address was not fetched", mozi.description)
+        # Linked: Ingress Tool Transfer for every URL, and the family hint at low confidence.
+        by_id = {o.id: o for o in parsed.objects}
+        rels = [o for o in parsed.objects if o.type == "relationship" and o.source_ref == mozi.id]
+        targets = {by_id[r.target_ref].type: r for r in rels}
+        self.assertEqual(by_id[targets["attack-pattern"].target_ref].external_references[0].external_id, "T1105")
+        self.assertEqual(by_id[targets["malware"].target_ref].name, "Mozi")
+        self.assertEqual(targets["malware"].confidence, 30)
 
     @unittest.skipUnless(stix2, "stix2 not installed")
     def test_the_taxii_collection_holds_the_same_urls(self):

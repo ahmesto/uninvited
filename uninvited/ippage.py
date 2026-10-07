@@ -41,7 +41,7 @@ def verdict(d: dict[str, Any]) -> str:
     if on:
         s += " On the " + ", ".join(on) + " list" + ("s" if len(on) > 1 else "") + "."
         if d.get("expires"):
-            s += f" Suggested expiry for your own copy: {d['expires'][:10]}."
+            s += f" Leaves them on {d['expires'][:10]} if it stays quiet."
     elif d.get("why_not"):
         s += " " + d["why_not"]
     return s
@@ -143,7 +143,7 @@ footer{{margin-top:40px;display:flex;flex-wrap:wrap;justify-content:space-betwee
 <body>
 <header>
 <a class="brand" href="/">{e(brand.upper())}<i></i></a>
-<nav><a href="/#live">LIVE</a><a href="/#intel">THREAT INTEL</a><a href="/week">THIS WEEK</a><a href="/#use">USE IT</a><a href="/#build">ABOUT</a></nav>
+<nav><a href="/#live">LIVE</a><a href="/#intel">THREAT INTEL</a><a href="/#use">USE IT</a><a href="/#build">ABOUT</a><a href="/week">THIS WEEK</a></nav>
 {ident.owner_link('style="margin-left:auto;font-size:12.5px;border-bottom:1px solid #55555a"')}
 </header>
 <div class="wrap">
@@ -159,7 +159,7 @@ footer{{margin-top:40px;display:flex;flex-wrap:wrap;justify-content:space-betwee
 {f'''<div class="facts">
 <div><small>First seen</small><span class="mono">{e(_iso(a.get("first_ts")))}</span></div>
 <div><small>Last seen</small><span class="mono">{e(_iso(a.get("last_ts")))}</span></div>
-<div><small>Listed on</small><span class="mono">{e(on)}{(" · suggested expiry " + e(d["expires"][:10])) if d.get("expires") else ""}</span></div>
+<div><small>Listed on</small><span class="mono">{e(on)}{(" · until " + e(d["expires"][:10]) + " if quiet") if d.get("expires") else ""}</span></div>
 <div><small>Named exploits</small>{exploits}</div>
 <div><small>ATT&amp;CK</small>{techs}</div>
 <div><small>Class</small>{e(a.get("kind") or "attack")}{(" · " + e(a["label"])) if a.get("label") else ""}</div>

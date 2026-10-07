@@ -18,7 +18,9 @@ because anyone looked at what it serves, so the lists say what they know and no 
   * confidence is 50 for one host, 65 for two, 80 for three and 95 for four or more,
     counted over every delivery, and file name hints at the malware family (a hint, not
     an identification).
-  * Each entry carries an advisory expiry two weeks after it was last asked for.
+  * A URL leaves the lists two weeks after it was last asked for (`expires`).
+  * A URL that has not passed the rule is shown on the dashboard, defanged and marked as
+    unconfirmed (`unconfirmed` below), and is never in a downloadable list.
 """
 from __future__ import annotations
 
@@ -30,6 +32,7 @@ from collections.abc import Callable
 from typing import Any
 
 from .core import iso_utc
+from .notables import defang
 from .textsafe import csv_cell
 
 # stem -> window in hours
@@ -44,9 +47,10 @@ def confidence(sources: int) -> int:
 
 
 def read(con: sqlite3.Connection, now: int, host_ok: Callable[[str], bool]) -> list[dict[str, Any]]:
-    """Every URL seen in the last 30 days that passes the rules above, strongest first."""
+    """Every URL that passes the rules above and has not expired, strongest first."""
     rows: list[dict[str, Any]] = []
-    for r in con.execute("SELECT * FROM droppers WHERE last_ts >= ?", (now - 30 * 86400,)):
+    since = max(now - 30 * 86400, now - TTL_DAYS * 86400)
+    for r in con.execute("SELECT * FROM droppers WHERE last_ts >= ?", (since,)):
         try:
             sources = json.loads(r["sources"])
             exploits = json.loads(r["exploits"] or "[]")
@@ -64,6 +68,31 @@ def read(con: sqlite3.Connection, now: int, host_ok: Callable[[str], bool]) -> l
         })
     rows.sort(key=lambda r: (-r["confidence"], -r["last_ts"], r["url"]))
     return rows
+
+
+UNCONFIRMED_DAYS = 7
+UNCONFIRMED_MAX = 5
+
+
+def unconfirmed(con: sqlite3.Connection, now: int, host_ok: Callable[[str], bool],
+                sender_ok: Callable[[str], bool]) -> list[dict[str, Any]]:
+    """Download URLs from the last week that one host asked for and the rule has not confirmed,
+    newest first, for the dashboard only. Defanged here, so the raw address never leaves."""
+    out: list[dict[str, Any]] = []
+    for r in con.execute("SELECT * FROM droppers WHERE last_ts >= ? AND self_hosted = 0 "
+                         "ORDER BY last_ts DESC LIMIT 200", (now - UNCONFIRMED_DAYS * 86400,)):
+        try:
+            sources = json.loads(r["sources"])
+        except ValueError:
+            continue
+        if len(sources) >= MIN_SOURCES or not host_ok(r["host"]):
+            continue
+        sender = next((ip for ip in sources if sender_ok(ip)), None)
+        out.append({"url": defang(r["url"]), "family_hint": r["family"], "sightings": r["hits"],
+                    "last_seen": iso_utc(r["last_ts"]), "sent_by": sender})
+        if len(out) >= UNCONFIRMED_MAX:
+            break
+    return out
 
 
 def window(rows: list[dict[str, Any]], hours: int, now: int) -> list[dict[str, Any]]:
@@ -111,7 +140,7 @@ def json_doc(brand: str, site: str, schema: str, hours: int, rows: list[dict[str
             "family_hint": "from the file name only. A hint, not an identification.",
             "delivered_by": "what the delivering requests were classified as",
             "confidence": "50 for one source, 65 for two, 80 for three, 95 for four or more",
-            "expires": "advisory: drop it from your own copy after this time",
+            "expires": "when it leaves this list unless it is asked for again",
         },
         "count": len(rows),
         "indicators": [record(r) for r in rows],

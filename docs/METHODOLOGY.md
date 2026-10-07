@@ -62,16 +62,21 @@ proxy hunting, camera probing, MCP endpoint discovery, a TLS handshake sent to a
 - **Tags** say what a host did in plain words (`ssh-bruteforce`, `telnet-bruteforce`, `rdp-scan`, `web-exploit`,
   `malware-delivery`, `ics-write`, `camera-exploit`, `ai-endpoint-abuse`, `persistent`, `multi-service`, ...). The full list,
   with meanings, is in `/feed/index.json` under `tag_meanings`.
-- **ATT&CK ids** come from the same evidence: T1110 for credential guessing, T1190 for a named exploit, T1105 for a download
-  command, T1021.001 for RDP, T1595 for scanning, and the ATT&CK for ICS ids T1692.001, T0888, T0801, T0858 and T0843 for
-  industrial protocol activity. Each id was looked up on attack.mitre.org before it was used.
+- **ATT&CK ids** come from the same evidence: T1110.001 for password guessing, T1110.003 for spraying (one or two
+  passwords across four or more usernames, three usernames per password or more), T1190 for an exploit, T1595.003 for
+  hunting exposed files (.env, .git, backups), T1595.002 for checking for one product, T1105 for a download command,
+  T1021.001 for RDP, T1595 for scanning, and the ATT&CK for ICS ids T1692.001, T0888, T0801, T0858 and T0843 for
+  industrial protocol activity. Credential stuffing cannot be told apart from guessing on a honeypot, so it is not used.
 - **CVE ids** appear only when a request matches *exactly one* vulnerability. A signature that covers a family of devices
   gets a technique and no CVE.
-- **Host type** (`hosting`, `isp`, `unknown`) is a guess from the network and reverse DNS names, and it is labelled as a
-  guess. A hosting address is usually one customer's server, so blocking it is low risk. A consumer ISP address can be
-  shared or reassigned next week, so it gets a shorter expiry and a `collateral_risk` of `medium`.
-- **Expiry** (`expires`) is advisory: how long to keep the entry in your own copy after the host was last seen. 7 days for
-  hosting, 3 for consumer ISPs, 5 when unknown, 50% longer for high-score hosts.
+- **Host type** (`hosting`, `isp`, `unknown`) comes from a customer-line reverse DNS name, then a table of known network
+  numbers, then words in the network name, and it is labelled as a guess. A hosting address is usually one customer's
+  server, so blocking it is low risk. A consumer ISP address can be shared or reassigned, so it leaves sooner and has a
+  `collateral_risk` of `medium`.
+- **Expiry** (`expires`) is when the host leaves the lists: 7 days after its last attack for hosting, 3 for consumer
+  ISPs, 5 when unknown, 50% longer for high-score hosts.
+- **Order**: score halved for every 3 days without an attack, so a strong host that went quiet sinks below an active one.
+  The score itself does not change.
 
 ## 5. Malware download URLs
 

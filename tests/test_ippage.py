@@ -113,7 +113,7 @@ class PageTests(unittest.TestCase):
         v = ippage.verdict({"found": True, "actor": {"hits": 3, "protos": ["SSH"], "first_ts": 1790000000, "last_ts": 1790100000},
                             "exploits": [], "listed": {"24h": True, "7d": True}, "expires": "2026-10-10T00:00:00Z"})
         self.assertIn("3 connections to this server on SSH", v)
-        self.assertIn("On the 24h, 7d lists. Suggested expiry for your own copy: 2026-10-10.", v)
+        self.assertIn("On the 24h, 7d lists. Leaves them on 2026-10-10 if it stays quiet.", v)
         self.assertNotIn("leaves", v)        # the expiry is advice for a copy, not when it leaves the lists
         svg = ippage.card_svg({"found": True, "ip": "203.0.113.1", "actor": {"isp": EVIL}, "score": 90, "listed": {}}, "example.org", "Uninvited")
         self.assertNotIn(EVIL, svg)

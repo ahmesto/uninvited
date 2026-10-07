@@ -94,7 +94,7 @@ class SectionTests(unittest.TestCase):
         """Five sections since 2026-10-05: the Check tools folded into Hosts and Behavior, Download
         moved to the Use it tab, and the Timeline took its place."""
         want = {
-            "overview": ["acc-a1", 'id="top-ov"', 'id="urls-ov"', 'id="svc-bar"', 'id="ov-get"',
+            "overview": ["acc-note", 'id="top-ov"', 'id="urls-ov"', 'id="svc-bar"', 'id="ov-get"',
                          'id="ibrief"', 'class="pg-h"', 'class="pg-lead"'],
             "hosts": ['id="check"', 'id="lookup-form"', 'id="bulk-go"', 'id="bulk-out"',
                       'id="top"', 'id="nets"', 'id="geo"', 'id="spread"', 'id="wsel"'],
@@ -146,6 +146,79 @@ class SectionTests(unittest.TestCase):
         self.assertIn("const arrived = all.filter(h => h.fs >= start), carried = all.filter(h => h.fs < start);", tl)
         self.assertIn("arrived in the window", tl)
 
+    def test_the_page_follows_the_feed_on_time_order_and_expiry(self):
+        """Times are UTC like every file, the lists keep the order the feed gives them (most active
+        first), and the copy describes one expiry: the moment a host leaves the lists."""
+        self.assertIn("d.getUTCHours()", PAGE)
+        self.assertNotIn("d.getHours()", PAGE)
+        loader = PAGE[PAGE.index("function hostList(win)"):]
+        loader = loader[:loader.index("\n}\n")]
+        self.assertNotIn(".sort(", loader)
+        self.assertNotIn("highest score first", PAGE)
+        self.assertNotIn("Suggested expiry", PAGE)
+        self.assertNotIn("for your own copy", PAGE)
+        self.assertNotIn("drop it then", PAGE)
+        self.assertIn("<h4>How long it stays</h4>", panel("build", "feed"))
+        self.assertIn("3 to 11 days after the last attack", PAGE)
+
+    def test_the_hosts_list_filters_pages_and_copies(self):
+        """Fifty rows at a time, so the panels under the list are reachable; a filter over every
+        listed host; and a button that copies every match, not only the rows on screen."""
+        hosts = panel("intel", "hosts")
+        for needle in ('id="hfind"', 'id="hcopy"', 'id="hmore"'):
+            self.assertIn(needle, hosts)
+        self.assertLess(hosts.index('id="hfind"'), hosts.index('id="top"'))
+        self.assertLess(hosts.index('id="top"'), hosts.index('id="hmore"'))
+        self.assertIn("const HOST_STEP = 50;", PAGE)
+        self.assertNotIn("TOP_MAX", PAGE)
+        self.assertIn('hostMatches.map(i => i.ip).join("\\n")', PAGE)
+        self.assertIn("hostShown = HOST_STEP;", PAGE)                    # a new window or filter starts at the top
+
+    def test_the_header_and_the_cleanup(self):
+        # Your own knocks open your own evidence, through the shared drawer.
+        self.assertIn('<button type="button" id="whoami" hidden', PAGE)
+        self.assertIn("box.dataset.ip = w.ip", PAGE)
+        # Live has a heading for screen readers and search, not drawn.
+        self.assertIn('<h1 class="vh">', view("live") if '<main id="v-live"' in PAGE else PAGE)
+        # The half-megabyte coastline waits for a zoom.
+        self.assertNotIn('.then(() => loadLand("/static/vendor/land-50m.json"))', PAGE)
+        self.assertIn("function wantDetail()", PAGE)
+        # On a phone the tabs are one row that scrolls, and nothing is smaller than 11px in the panels.
+        self.assertIn("#tabs{order:2;flex:1 0 100%;height:auto;overflow-x:auto", PAGE)
+        self.assertIn(".subtabs{flex-wrap:nowrap;overflow-x:auto", PAGE)
+        # Said once, not twice.
+        self.assertNotIn("drag to rotate", PAGE)
+        self.assertNotIn("is it on the feed, and why</span>", PAGE)
+        self.assertNotIn('href="#intel" data-glyph="&rarr;">threat intel</a>', PAGE)
+        self.assertNotIn("</span> UTC</span>", PAGE)
+        self.assertNotIn("NOTHING NEW THIS WEEK", PAGE)
+        self.assertNotIn("the grouping caps at", PAGE)
+        self.assertNotIn(">What they are doing<", PAGE)
+        self.assertIn('<span class="ptitle">ATT&amp;CK techniques</span>', PAGE)
+        # The accuracy block is one number and one line.
+        self.assertNotIn("acc-a7", PAGE)
+        self.assertIn('<a href="#build-feed">How it is measured</a>', PAGE)
+
+    def test_every_page_lists_the_tabs_in_the_same_order(self):
+        order = ["Live", "Threat Intel", "Use it", "About", "This week"]
+        nav = PAGE[PAGE.index('<nav id="tabs"'):]
+        nav = nav[:nav.index("</nav>")]
+        self.assertEqual([re.sub(r"<.*", "", a.split(">", 1)[1], flags=re.S).strip() for a in nav.split("<a ")[1:]], order)
+        for module in ("digest.py", "ippage.py"):
+            text = (ROOT / "uninvited" / module).read_text(encoding="utf-8")
+            served = text[text.index('<nav><a href="/#live">'):]
+            served = served[:served.index("</nav>")]
+            self.assertEqual(re.findall(r">([A-Z ]+)</a>", served), [o.upper() for o in order], module)
+
+    def test_unconfirmed_urls_are_grey_defanged_by_the_server_and_open_the_sender(self):
+        urls = PAGE[PAGE.index("function loadUrls()"):]
+        urls = urls[:urls.index("\nfunction ")]
+        self.assertIn('fetch("/api/unconfirmed-urls")', urls)
+        self.assertIn("urow un", urls)
+        self.assertIn("data-ip=\"' + esc(i.sent_by)", urls)
+        self.assertIn("esc(i.url)", urls)                 # already defanged: not passed through defang() again
+        self.assertIn(".urow.un .u-url{color:var(--text2)}", PAGE)
+
     def test_use_it_sections_hold_what_they_should(self):
         want = {
             "start": ["Which list should I use?", 'id="use-download"', 'id="sample"', 'id="sample-box"', 'id="curated"',
@@ -164,14 +237,18 @@ class SectionTests(unittest.TestCase):
         self.assertLess(start.index("Which list should I use?"), start.index('id="use-download"'))
         self.assertLess(start.index('class="fmts"'), start.index('id="sample-box"'))
         self.assertEqual(PAGE.count('class="fmts"'), 1)                 # the tiles live here and nowhere else
-        self.assertIn('href="#use-download">Get the feed</a>', view("use"))
+        # the tab starts with what to run, not with a pitch that sends people back to Live
+        use = view("use")
+        self.assertIn('<h1 class="pg-h">Use the feed</h1>', use)
+        self.assertNotIn("Watch it live", use)
+        self.assertNotRegex(use, r"in \d+ days")                        # a day count comes from the data
 
     def test_use_it_has_one_navigation_and_no_repeat_of_about(self):
         use = view("use")
         self.assertNotIn('class="jobs', use)             # the strip is the nav; the four cards doubled it
         self.assertNotIn('class="st-steps"', use)        # "How it works" is the About tab's job
         self.assertIn('id="usetabs"', use)
-        self.assertIn('<button class="lnk" type="button" id="st-look">', use)   # opens the drawer for that event
+        self.assertNotIn('id="st-look"', use)
 
     def test_about_sections_hold_what_they_should(self):
         how, feed = panel("build", "how"), panel("build", "feed")

@@ -165,7 +165,7 @@ class TaxiiState:
             return
         doc = {"v": STATE_VERSION, "collections": {
             stem: {i: [e.date_added, e.modified] for i, e in snap.entries.items()
-                   if e.obj_type == "indicator"}
+                   if e.obj_type != "identity"}
             for stem, snap in self.snaps.items()}}
         try:
             fd, tmp = tempfile.mkstemp(prefix=".taxii_state.", dir=os.path.dirname(os.path.abspath(self.path)))
@@ -191,9 +191,11 @@ class TaxiiState:
             before = old.entries if old else {}
             saved = self._saved.get(stem, {})
             entries = {identity_entry.obj_id: identity_entry}
-            build = self.maker.url_indicator if stem.startswith("malware-urls") else self.maker.indicator
-            for r in rows:
-                obj = build(r)
+            urls = stem.startswith("malware-urls")
+            build = self.maker.url_objects if urls else self.maker.ip_objects
+            # A new attack pattern or relationship is dated when it first appears, like an indicator,
+            # so a client asking for added_after receives it.
+            for obj in self.maker.shared(rows, urls) + [o for r in rows for o in build(r)]:
                 text = json.dumps(obj, separators=(",", ":"))
                 prev = before.get(obj["id"])
                 if prev and prev.text == text:
@@ -204,7 +206,7 @@ class TaxiiState:
                     date_added = kept[0]               # same version as before the restart
                 else:
                     date_added = now_us
-                entries[obj["id"]] = Entry(date_added, obj["modified"], text, obj["id"], "indicator")
+                entries[obj["id"]] = Entry(date_added, obj["modified"], text, obj["id"], obj["type"])
             if old is None or set(entries) != set(before) or any(
                     entries[i] is not before.get(i) for i in entries):
                 changed = True
@@ -275,7 +277,7 @@ class TaxiiState:
 
     def count(self, stem: str) -> int:
         snap = self.snaps.get(stem)
-        return len(snap.entries) - 1 if snap else 0      # not counting the identity
+        return sum(1 for e in snap.entries.values() if e.obj_type == "indicator") if snap else 0
 
 
 # ------------------------------------------------------------------ HTTP layer

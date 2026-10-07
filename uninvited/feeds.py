@@ -99,6 +99,15 @@ CHANGELOG = [
                "replaces; the malware URL text files say they hold raw URLs; index.json lists the defender "
                "files; MISP tags carry colours; responses are cached only until the next rebuild; SSH client "
                "fingerprints (hassh) are now captured for every SSH login, not one host in eight"},
+    {"date": "2026-10-06", "schema_version": "1.0",
+     "change": "an attacker leaves every list at its expires time (3 to 11 days after its last attack) instead of "
+               "staying for the whole window, and a malware URL 14 days after it was last asked for; lists are "
+               "ordered by score halved for every 3 days without an attack, so the most active come first; "
+               "T1110 is now T1110.001 (guessing) or T1110.003 (spraying), file hunts are T1595.003 and product "
+               "probes T1595.002 instead of T1190; host_type also comes from the network number; STIX bundles "
+               "and TAXII collections carry attack-pattern objects, malware families and the relationships "
+               "between them; notable.atom names the address in each entry and carries machine-readable "
+               "indicators"},
 ]
 
 PRECISION_REFRESH = 3600   # the accuracy measure is expensive and slow-moving
@@ -194,6 +203,12 @@ WHERE k.ts > ? AND k.ts <= ? AND NOT {_UDP} AND NOT {_SCAN}
 GROUP BY k.ip
 """
 
+# How many different usernames and passwords each address tried: spraying or guessing.
+_SPREAD_SQL = """
+SELECT ip, COUNT(DISTINCT username) AS users, COUNT(DISTINCT password) AS passwords
+FROM knocks WHERE ts >= ? AND password IS NOT NULL GROUP BY ip
+"""
+
 _AGG_SQL = f"""
 SELECT k.ip AS ip, k.proto AS proto, {_EXPLOIT} AS exploit, {_ICS} AS ics,
        SUM(CASE WHEN NOT {_UDP} THEN 1 ELSE 0 END)                    AS verified,
@@ -255,6 +270,8 @@ class FeedCache:
                        if state_path else None)
         self.taxii = taxii.TaxiiState(self.stix, self.ns, taxii_state)
         self._url_counts: dict[str, int] = {}
+        # Download URLs seen in the last week that the list rule has not confirmed (urlfeed.unconfirmed).
+        self.unconfirmed: list[dict[str, Any]] = []
         self._list_rows: dict[str, tuple[str, list[dict[str, Any]]]] = {}
         self._as_of: int = 0
         # The weekly digest: the current one in memory, one JSON file per ISO week on disk.
@@ -268,6 +285,8 @@ class FeedCache:
         self.built_at: float = 0.0
         self.precision: dict[str, Any] = {}
         self._precision_at: float = 0.0
+        self._spread: dict[str, tuple[int, int]] = {}
+        self._spread_at: float = 0.0
 
     # ------------------------------------------------------------ building
 
@@ -298,6 +317,14 @@ class FeedCache:
             return not any(host == d or host.endswith("." + d) for d in intel.NEVER_DOMAINS)
         return self._publishable(host)
 
+    def _excluded(self, ip: str) -> bool:
+        """Under feed.exclude: the operator's own addresses."""
+        try:
+            addr = ipaddress.ip_address(ip)
+        except ValueError:
+            return True
+        return any(addr in net for net in self.exclude)
+
     def _publishable(self, ip: str, rdns: str | None = None) -> bool:
         """Never listed, whatever the host did: private and shared space, the
         addresses in intel.NEVER_ADDRESSES, the big search crawlers (a name under
@@ -315,7 +342,7 @@ class FeedCache:
         return not any(addr in net for net in self.exclude)
 
     def _aggregate(self, con: sqlite3.Connection, actors: dict[str, dict[str, Any]],
-                   since: int) -> list[dict[str, Any]]:
+                   since: int, spread: dict[str, tuple[int, int]] | None = None) -> list[dict[str, Any]]:
         per: dict[str, dict[str, Any]] = {}
         for r in con.execute(_AGG_SQL, (since,)):
             if not r["verified"]:
@@ -345,7 +372,8 @@ class FeedCache:
             meta = actors.get(ip, {})
             if not self._publishable(ip, meta.get("rdns")):
                 continue
-            techniques, cves = intel.tags(a["by_proto"], a["exploits"], a["ics"], a["creds"])
+            techniques, cves = intel.tags(a["by_proto"], a["exploits"], a["ics"], a["creds"],
+                                          (spread or {}).get(ip, (0, 0)))
             named = intel.named_exploits(a["exploits"])
             protos = sorted(a["by_proto"]) or sorted(a["seen_protos"])
             # The actors table remembers when an address was first and last
@@ -353,7 +381,7 @@ class FeedCache:
             # Inside a 24 hour window nothing could look older than a day.
             life_first = min(a["first_ts"], meta.get("first_ts") or a["first_ts"])
             life_last = max(a["last_ts"], meta.get("last_ts") or a["last_ts"])
-            htype = intel.host_type(meta.get("isp"), meta.get("rdns"))
+            htype = intel.host_type(meta.get("isp"), meta.get("rdns"), meta.get("asn"))
             kind = meta.get("kind") or "attack"
             rows.append({
                 "ip": ip, "kind": kind,
@@ -387,7 +415,7 @@ class FeedCache:
                 b = longest.get(r["ip"], r)
                 r["score"] = intel.score(b["engaged"], b["n_proto"],
                                          b["span"], b["n_exploit"])
-                # Advisory: how long to keep it if you cache the list yourself.
+                # When it leaves the lists, unless it attacks again.
                 r["expires_ts"] = r["last_ts"] + 86400 * intel.ttl_days(
                     r["host_type"], r["score"])
 
@@ -441,10 +469,20 @@ class FeedCache:
                     "SELECT ip, kind, label, iso, country, isp, asn, hassh, ja3, rdns, "
                     "first_ts, last_ts FROM actors")
             }
-            windows = {hours: self._aggregate(con, actors, now - hours * 3600)
+            # Guessing or spraying changes slowly and the query costs as much as the aggregate, so hourly.
+            if not self._spread_at or now - self._spread_at > PRECISION_REFRESH:
+                self._spread = {r["ip"]: (r["users"], r["passwords"])
+                                for r in con.execute(_SPREAD_SQL, (now - max(WINDOWS) * 3600,))}
+                self._spread_at = now
+            spread = self._spread
+            windows = {hours: self._aggregate(con, actors, now - hours * 3600, spread)
                        for hours in WINDOWS}
             url_rows = urlfeed.read(con, now, self._url_host_ok)
-            notable_items = notables.from_connection(con, 24, now)
+            unconfirmed = urlfeed.unconfirmed(con, now, self._url_host_ok, lambda ip: not self._excluded(ip))
+            # The Atom feed is not behind the dashboard's scrubber, so an excluded address
+            # (the operator testing from home) is kept out of it here.
+            notable_items = [i for i in notables.from_connection(con, 24, now)
+                             if not i.get("ip") or not self._excluded(i["ip"])]
             if not self.precision or now - self._precision_at > PRECISION_REFRESH:
                 self.precision = self._measure_precision(con, actors, now)
                 self._precision_at = now
@@ -458,7 +496,7 @@ class FeedCache:
         curated: list[dict[str, Any]] = []
         list_rows: dict[str, tuple[str, list[dict[str, Any]]]] = {}
         for stem, (kind, hours, min_hits) in SPECS.items():
-            rows = self._select(windows[hours], kind, min_hits)
+            rows = self._select(windows[hours], kind, min_hits, now)
             selected[stem] = rows
             list_rows[stem] = (kind, rows)
             counts.append(f"{stem}={len(rows)}")
@@ -508,7 +546,9 @@ class FeedCache:
             files[f"{stem}.zeek.intel"] = self._snap(defender.zeek_intel(self.brand, self.site, stem, rows, now), CONTENT_TYPES["txt"])
             files[f"{stem}.iprep.list"] = self._snap(defender.iprep_list(stem, rows), CONTENT_TYPES["txt"])
         files["iprep-categories.txt"] = self._snap(defender.iprep_categories(), CONTENT_TYPES["txt"])
-        files["notable.atom"] = self._snap(notables.atom(notable_items, self.brand, self.site, now), NAMES["notable.atom"])
+        files["notable.atom"] = self._snap(
+            notables.atom(notable_items, self.brand, self.site, now, {r["url"] for r in url_rows}),
+            NAMES["notable.atom"])
         files["index.json"] = self._index(selected, curated)
         try:
             con = sqlite3.connect(f"file:{self.db_path}?mode=ro", uri=True, timeout=15)
@@ -543,13 +583,20 @@ class FeedCache:
         self.by_ip = {h: {r["ip"]: r for r in rows} for h, rows in windows.items()}
         self.windows, self.files, self.built_at = windows, files, time.time()
         self._list_rows, self._as_of = list_rows, now
+        self.unconfirmed = unconfirmed
         log.info("feed rebuilt: %s", ", ".join(counts))
 
     @staticmethod
-    def _select(rows: list[dict[str, Any]], kind: str, min_hits: int) -> list[dict[str, Any]]:
-        column = "engaged" if kind == "attack" else "verified"
-        picked = [r for r in rows if r["kind"] == kind and r[column] >= min_hits]
-        picked.sort(key=lambda r: (-(r["score"] or 0), -r[column], r["ip"]))
+    def _select(rows: list[dict[str, Any]], kind: str, min_hits: int, now: float) -> list[dict[str, Any]]:
+        """The hosts on one list. An attacker is on it until its expiry, and the list is ordered by
+        score halved for every few quiet days (intel.rank), so the most active come first."""
+        if kind != "attack":
+            picked = [r for r in rows if r["kind"] == kind and r["verified"] >= min_hits]
+            picked.sort(key=lambda r: (-r["verified"], r["ip"]))
+            return picked
+        picked = [r for r in rows if r["kind"] == kind and r["engaged"] >= min_hits
+                  and (r["expires_ts"] or 0) >= now]
+        picked.sort(key=lambda r: (-intel.rank(r["score"], now - r["last_ts"]), -r["engaged"], r["ip"]))
         return picked
 
     # ------------------------------------------------------------ renderers
@@ -585,7 +632,7 @@ class FeedCache:
             "# UDP-only sources are never listed, they can be spoofed.",
             f"# newest listed activity: {newest}",
             f"# {len(rows)} addresses, one per line"
-            + (", highest score first." if kind == "attack" else "."),
+            + (", most active first. Each leaves 3 to 11 days after its last attack." if kind == "attack" else "."),
         ]
         return self._snap("\n".join(head + [r["ip"] for r in rows]) + "\n", CONTENT_TYPES["txt"])
 
@@ -623,15 +670,15 @@ class FeedCache:
             "source": self.site,
             "window": WINDOWS[hours],
             "rule": self._rule(kind, min_hits) + ". UDP-only sources are never listed.",
-            "score": ("0 to 100. volume, breadth, persistence and named exploits, "
-                      "see intel.py" if kind == "attack" else None),
+            "score": ("0 to 100. volume, breadth, persistence and named exploits, see intel.py. "
+                      "The list is ordered by score halved for every 3 days without an attack"
+                      if kind == "attack" else None),
             "fields": {
                 "tags": "what the host did, in plain words",
-                "host_type": "hosting, isp or unknown, a guess from the network name",
+                "host_type": "hosting, isp or unknown, a guess from the network number and name",
                 "collateral_risk": "low for hosting, medium for isp (may be shared or reassigned)",
-                "expires": "advisory: drop it from your own copy after this time. It is the last activity "
-                           "plus 3 to 11 days (shorter for consumer lines, longer for strong evidence), so it "
-                           "can already be past for a host that is still inside this list's window",
+                "expires": "when it leaves this list unless it attacks again: 3 to 11 days after its last "
+                           "attack, shorter for consumer lines, longer for strong evidence",
                 "hassh": "SSH client fingerprint. Hosts with the same value run the same SSH client software",
                 "ja3": "TLS client fingerprint (JA3), from a TLS hello sent to a plain web port. Hosts with the same "
                        "value run the same TLS stack",
@@ -905,9 +952,11 @@ class FeedCache:
         in-memory build, so it costs no database work."""
         listed: dict[str, bool] = {}
         row: dict[str, Any] | None = None
+        now = time.time()
         for hours, label in WINDOWS.items():
             r = self.by_ip.get(hours, {}).get(ip)
-            listed[label] = bool(r and r["kind"] == "attack" and r["engaged"] >= threshold)
+            listed[label] = bool(r and r["kind"] == "attack" and r["engaged"] >= threshold
+                                 and (r["expires_ts"] or 0) >= now)
             if r is not None:
                 row = r          # the longest window that saw it wins
         out: dict[str, Any] = {"listed": listed, "score": None, "techniques": [],
@@ -928,9 +977,10 @@ class FeedCache:
         smallest published window that contains it, which can be a little wider.
         """
         window = next((w for w in sorted(WINDOWS) if w >= hours), max(WINDOWS))
-        cutoff = time.time() - hours * 3600
+        now = time.time()
+        cutoff = now - hours * 3600
         rows = [r for r in self.windows.get(window, [])
                 if r["kind"] == "attack" and r["engaged"] >= min_hits
-                and (r["last_ts"] or 0) >= cutoff]
-        rows.sort(key=lambda r: (-r["engaged"], r["ip"]))
+                and (r["last_ts"] or 0) >= cutoff and (r["expires_ts"] or 0) >= now]
+        rows.sort(key=lambda r: (-intel.rank(r["score"], now - r["last_ts"]), -r["engaged"], r["ip"]))
         return [r["ip"] for r in rows]

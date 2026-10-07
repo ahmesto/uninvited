@@ -582,7 +582,16 @@ def build_app(cfg: Config, store: Store, hub: Hub, feeds: FeedCache) -> FastAPI:
     async def notable_list(hours: int = Query(1, ge=1, le=24)):
         """The few events in the window worth stopping for (see notables.py)."""
         out = await heavy(("notables", hours), lambda: find_notables(store, hours, int(time.time())))
-        return out if isinstance(out, Response) else {"hours": hours, "notables": out}
+        if isinstance(out, Response):
+            return out
+        # A dropper item carries its raw URL for the Atom feed; the page only ever gets it defanged.
+        return {"hours": hours, "notables": [{k: v for k, v in i.items() if k != "url"} for i in out]}
+
+    @app.get("/api/unconfirmed-urls")
+    async def unconfirmed_urls():
+        """Download URLs from the last week that one host asked for and the list rule has not
+        confirmed. Defanged, from the feed build, never in a downloadable list."""
+        return {"days": 7, "urls": feeds.unconfirmed}
 
     @app.get("/api/narrative")
     async def narrative(hours: int = Query(1, ge=1, le=24)):
@@ -698,6 +707,9 @@ def build_app(cfg: Config, store: Store, hub: Hub, feeds: FeedCache) -> FastAPI:
                 n = intel["engaged_30d"]
                 why = (f"Only {n} attack event{'s' if n != 1 else ''} in 30 days. "
                        "The list needs 3.")
+            elif intel.get("expires") and intel["expires"] < time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(now)):
+                why = (f"It left the list on {intel['expires'][:10]}, days after its last attack. "
+                       "It returns if it attacks again.")
             else:
                 why = "Not on the list right now."
         return {"ip": text, **ev, **intel, "why_not": why}

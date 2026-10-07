@@ -36,7 +36,16 @@ class ReferenceTests(unittest.TestCase):
     def test_the_bundle_is_valid_json_with_one_identity_and_one_indicator_per_host(self):
         doc = json.loads(self.cache._stix(168, samples.rows()).body)
         kinds = [o["type"] for o in doc["objects"]]
-        self.assertEqual(kinds, ["identity"] + ["indicator"] * len(samples.rows()))
+        self.assertEqual(kinds[0], "identity")
+        self.assertEqual(kinds.count("indicator"), len(samples.rows()))
+        # every technique a host showed is an attack-pattern the indicator points at, each defined once
+        by_id = {o["id"]: o for o in doc["objects"]}
+        self.assertEqual(len(by_id), len(doc["objects"]))
+        for r in samples.rows():
+            ind = next(o for o in doc["objects"] if o["type"] == "indicator" and o["name"] == r["ip"])
+            pointed = {by_id[o["target_ref"]]["external_references"][0]["external_id"]
+                       for o in doc["objects"] if o["type"] == "relationship" and o["source_ref"] == ind["id"]}
+            self.assertEqual(pointed, set(r["techniques"]), r["ip"])
 
 
 if __name__ == "__main__":

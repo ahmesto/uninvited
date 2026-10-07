@@ -56,9 +56,23 @@ ROUTER_EXPLOITS = frozenset({"Huawei HG532 RCE (CVE-2017-17215)", "TR-064 Router
                              "GPON Router Exploit", "Linksys Router Exploit", "IoT Router Exploit"})
 # Named by the AI-endpoint decoy when a client does more than look.
 AI_ABUSE = frozenset({"MCP Tool Call Attempt", "LLM Endpoint Abuse"})
+# Named requests that look for a file or page left exposed, from a list of paths: Wordlist Scanning.
+WORDLIST_HUNTS = frozenset({
+    "DotEnv File Exposure", "Git Repository Exposure", "Credential File Exposure",
+    "Spring Boot Actuator Exposure", "Backup Archive Hunt", "Dependency File Hunt",
+    "Metrics Endpoint Probe", "Webshell Probe", "Installer Script Probe",
+})
+# Named requests that check whether one product is there: Vulnerability Scanning.
+PRODUCT_PROBES = frozenset({
+    "Apache Solr Probe", "Tomcat Manager Probe", "WordPress Probe", "Kubernetes API Probe",
+    "Exchange Probe", "VPN Appliance Probe", "Apache Ignite Probe", "GeoServer Probe",
+})
 
 TECHNIQUES: dict[str, str] = {
     "T1110": "Brute Force",
+    "T1110.001": "Brute Force: Password Guessing",
+    "T1110.003": "Brute Force: Password Spraying",
+    "T1595.003": "Active Scanning: Wordlist Scanning",
     "T1190": "Exploit Public-Facing Application",
     "T1021.001": "Remote Services: Remote Desktop Protocol",
     "T1595": "Active Scanning",
@@ -78,6 +92,9 @@ TECHNIQUES: dict[str, str] = {
 # kept as a plain tag and never reaches the ATT&CK views, so these are copied, never guessed.
 MISP_ATTACK = {
     "T1110": "Brute Force - T1110",
+    "T1110.001": "Password Guessing - T1110.001",
+    "T1110.003": "Password Spraying - T1110.003",
+    "T1595.003": "Wordlist Scanning - T1595.003",
     "T1190": "Exploit Public-Facing Application - T1190",
     "T1021.001": "Remote Desktop Protocol - T1021.001",
     "T1595": "Active Scanning - T1595",
@@ -131,6 +148,13 @@ TAG_DESCRIPTIONS: dict[str, str] = {
 TAG_LISTS = ("persistent", "ssh-bruteforce", "telnet-bruteforce", "rdp-scan", "web-exploit")
 
 HIGH_SCORE = 60          # the "high confidence" list
+FADE_DAYS = 3            # list order: a host's weight halves for every 3 days without an attack
+
+
+def rank(score: int | None, idle_seconds: float) -> float:
+    """Where a host sits in a list: its score, halved for every FADE_DAYS since its last attack.
+    Only the order uses it; the score stays the evidence."""
+    return (score or 0) * 0.5 ** (max(0.0, idle_seconds) / (FADE_DAYS * 86400))
 
 
 def behaviour_tags(engaged_by_proto: dict[str, int], exploits: dict[str, int],
@@ -228,17 +252,37 @@ ISP_WORDS = (
     "internet service", "internet services", "residential", "chinanet",
     "china telecom", "cmnet", "kpn", "swisscom", "deutsche telekom",
 )
+# Network numbers (ASNs) whose type is known, checked before the words. Words miss networks named
+# after a company: "Cyber Internet Services" is a Pakistani ISP, "UCLOUD" a cloud.
+HOSTING_ASNS = frozenset({
+    8075, 8100, 9009, 12876, 13335, 14061, 14618, 15169, 16276, 16509, 19318, 20473, 20940,
+    24940, 26496, 28753, 30633, 31898, 36352, 37963, 40021, 44477, 45090, 45102, 51167, 53667,
+    54113, 59253, 60781, 62240, 63949, 132203, 135377, 141995, 197540, 202425, 210644, 211252,
+    213438, 396982,
+})
+ISP_ASNS = frozenset({
+    577, 701, 812, 1136, 1221, 1680, 2516, 2856, 3215, 3269, 3320, 3352, 3462, 3786, 4134,
+    4713, 4760, 4766, 4775, 4788, 4837, 5089, 5384, 5410, 5416, 6147, 6327, 6830, 6849,
+    7018, 7303, 7470, 7545, 7552, 7713, 7922, 8151, 8359, 8376, 8452, 8551, 9050, 9121, 9198,
+    9269, 9299, 9318, 9541, 9605, 9808, 9829, 10318, 10796, 11427, 12322, 12389, 12735,
+    15895, 16135, 17557, 17676, 18403, 18881, 20115, 21497, 22773, 23969, 24560, 24863, 25019,
+    26599, 27699, 28573, 39891, 45609, 45899, 55836, 56046, 56047, 131090,
+})
 RESIDENTIAL_RDNS = (
     "dynamic", "dyn-", "dhcp", "pool", "dsl", "adsl", "cable", "cust", "customer",
     "ppp", "broadband", "residential",
 )
 
 
-def host_type(network: str | None, rdns: str | None = None) -> str:
-    """'hosting', 'isp' or 'unknown', from words in the network and reverse-DNS
-    names. Reverse DNS that looks like a customer line wins over the network."""
+def host_type(network: str | None, rdns: str | None = None, asn: int | None = None) -> str:
+    """'hosting', 'isp' or 'unknown'. Reverse DNS that looks like a customer line wins, then the
+    network number, then words in the network's name."""
     r = (rdns or "").lower()
     if r and any(w in r for w in RESIDENTIAL_RDNS):
+        return "isp"
+    if asn in HOSTING_ASNS:
+        return "hosting"
+    if asn in ISP_ASNS:
         return "isp"
     n = (network or "").lower()
     if any(w in n for w in HOSTING_WORDS):
@@ -252,8 +296,8 @@ COLLATERAL = {"hosting": "low", "isp": "medium", "unknown": "unknown"}
 
 
 def ttl_days(kind_of_host: str, score: int | None) -> int:
-    """How long a consumer who caches the list should keep an entry after the
-    last time it was seen. Consumer lines get less time, strong evidence more."""
+    """How many days an attacker stays on the lists after its last attack. Consumer lines get
+    less time, strong evidence more. `expires` in the files is that moment."""
     base = {"hosting": 7, "isp": 3}.get(kind_of_host, 5)
     if score is not None and score >= HIGH_SCORE:
         base = (base * 3 + 1) // 2
@@ -299,34 +343,57 @@ ICS_TECHNIQUE_FOR = {"write": "T1692.001", "identity": "T0888", "read": "T0801",
                      "control": "T0858", "program": "T0843"}
 
 
+def web_techniques(named: list[str]) -> set[str]:
+    """ATT&CK ids for named web requests: hunting for exposed files is Wordlist Scanning,
+    checking for one product is Vulnerability Scanning, the rest is exploitation."""
+    out: set[str] = set()
+    for n in named:
+        if n in WORDLIST_HUNTS:
+            out.add("T1595.003")
+        elif n in PRODUCT_PROBES:
+            out.add("T1595.002")
+        else:
+            out.add("T1190")
+            if n == "Malware Dropper Command":
+                out.add("T1105")
+    return out
+
+
+def guessing(users: int, passwords: int) -> str:
+    """Password Spraying when few passwords were tried across many usernames, otherwise Password
+    Guessing. Credential stuffing cannot be told apart from guessing from here."""
+    return "T1110.003" if users >= 4 and users >= 3 * max(1, passwords) else "T1110.001"
+
+
 def tags(engaged_by_proto: dict[str, int], exploits: dict[str, int],
          ics: dict[str, int] | None = None,
-         creds: dict[str, int] | None = None) -> tuple[list[str], list[str]]:
-    """-> (ATT&CK technique ids, CVE ids) for one address.
+         creds: dict[str, int] | None = None,
+         spread: tuple[int, int] = (0, 0)) -> tuple[list[str], list[str]]:
+    """-> (ATT&CK technique ids, CVE ids) for one address. `spread` is how many different
+    usernames and passwords it tried.
 
     An address with no engaged events only connected and left, which is
     reconnaissance: T1595.
     """
     named = named_exploits(exploits)
+    brute = guessing(*spread)
     techniques: set[str] = set()
     for proto, count in engaged_by_proto.items():
         if count <= 0:
             continue
         if proto in CREDENTIAL_PROTOS:
-            techniques.add("T1110")
+            techniques.add(brute)
         elif proto == "RDP":
             techniques.add("T1021.001")
         elif proto == "SMB":
             techniques.add("T1595")
         elif proto in HTTP_PROTOS:
             if named:
-                techniques.add("T1190")
-                if "Malware Dropper Command" in named:
-                    techniques.add("T1105")
+                techniques |= web_techniques(named)
             else:
                 techniques.add("T1595.002" if proto == "HTTP" else "T1595")
             if (creds or {}).get(proto):
-                techniques.add("T1110")
+                techniques.add(brute)
         elif proto in ICS_PROTOS:
             kinds = [k for k, n in (ics or {}).items() if n > 0 and k in ICS_TECHNIQUE_FOR]
             techniques.update(ICS_TECHNIQUE_FOR[k] for k in kinds)

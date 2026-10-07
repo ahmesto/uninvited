@@ -234,7 +234,7 @@ footer{{margin-top:40px;display:flex;flex-wrap:wrap;justify-content:space-betwee
 <body>
 <header>
 <a class="brand" href="/">{e(brand.upper())}<i></i></a>
-<nav><a href="/#live">LIVE</a><a href="/#intel">THREAT INTEL</a><a href="/week" class="on">THIS WEEK</a><a href="/#use">USE IT</a><a href="/#build">ABOUT</a></nav>
+<nav><a href="/#live">LIVE</a><a href="/#intel">THREAT INTEL</a><a href="/#use">USE IT</a><a href="/#build">ABOUT</a><a href="/week" class="on">THIS WEEK</a></nav>
 {ident.owner_link('style="margin-left:auto;font-size:12.5px;border-bottom:1px solid #55555a"')}
 </header>
 <div class="wrap">

@@ -37,7 +37,7 @@ curl -s https://example.org/feed/attackers-7d.json | jq -r '.indicators[] | sele
   "events": 412,
   "protocols": ["SSH", "TNET"],
   "country": "NL", "asn": 64500, "network": "Example Hosting BV",
-  "attack_techniques": ["T1110"],
+  "attack_techniques": ["T1110.001"],
   "cves": [], "exploits": [],
   "hassh": "ae8bd7dd09970555aa4ea8ab1b0b1e1c",
   "label": null,
@@ -50,8 +50,9 @@ curl -s https://example.org/feed/attackers-7d.json | jq -r '.indicators[] | sele
 }
 ```
 
-`score` is 0 to 100. `expires` is advisory: drop the entry from your own copy after it. `host_type` and `collateral_risk` are
-a guess from network names and are labelled as one.
+`score` is 0 to 100. `expires` is when the host leaves the list unless it attacks again. Every list is ordered by score
+halved for every 3 days without an attack, so the most active hosts come first. `host_type` and `collateral_risk` are a
+guess from the network number and name, and are labelled as one.
 
 ## A malware URL record
 
@@ -66,17 +67,20 @@ a guess from network names and are labelled as one.
 ```
 
 `sources` is how many different hosts delivered the URL. `family_hint` comes from the file name only. These addresses were
-asked for in exploit requests and **have not been fetched or checked**. Do not browse to them.
+asked for in exploit requests and **have not been fetched or checked**. Do not browse to them. A URL from a single host that
+is not its own is never in these files; the site shows it defanged and grey until a second host asks for it.
 
 ## STIX 2.1 and TAXII 2.1
 
-The `.stix.json` files are STIX 2.1 bundles: an identity and one `indicator` per entry, with the tags as `labels`, ATT&CK and
-CVE `external_references`, `confidence` from the score, `valid_from` from the first sighting and `valid_until` from the
-suggested expiry. Attackers use `[ipv4-addr:value = '...']` or `ipv6-addr`; URLs use `[url:value = '...']`. Identifiers are
-derived from the data, so an unchanged list is byte-identical from one rebuild to the next. They parse with the strict
-`stix2` library.
+The `.stix.json` files are STIX 2.1 bundles: an identity, one `indicator` per entry, and the objects it points at. Each
+indicator has the tags as `labels`, ATT&CK and CVE `external_references`, `confidence` from the score, `valid_from` from
+the first sighting and `valid_until` from its expiry, and an `indicates` relationship to an `attack-pattern` for every
+technique it showed. A malware URL also relates to a `malware` object for its family hint, at confidence 30, because a
+file name is not an identification. Attackers use `[ipv4-addr:value = '...']` or `ipv6-addr`; URLs use
+`[url:value = '...']`. Identifiers are derived from the data, so an unchanged list is byte-identical from one rebuild to the
+next. They parse with the strict `stix2` library.
 
-The same indicators are served by a read-only **TAXII 2.1** server so a threat-intelligence platform can subscribe:
+The same objects are served by a read-only **TAXII 2.1** server so a threat-intelligence platform can subscribe:
 
 ```python
 from taxii2client.v21 import Server
@@ -97,15 +101,21 @@ Tested with the reference Python client; not yet with vendor platforms.
 `mitre-attack-pattern` galaxy tags; CVEs tried are `vulnerability` attributes. An address that left the list in the last
 two weeks is sent with `deleted` set, so MISP removes it. Imported into a stock MISP 2.5.48 on 2026-10-03 with no errors.
 
-## The expiry is advice, not list membership
+## How long an entry stays
 
-A list holds every host seen in its window. `expires` (and `valid_until` in STIX and TAXII) is how long to keep blocking a
-host after its last activity: 3 days for a consumer line, 7 for hosting, 5 when unknown, half as long again for a score
-of 60 or more. So a host can be on the 30 day list with an expiry already past, and about three quarters of that list is.
-A platform that honours the expiry (OpenCTI decay, Sentinel expiry, a script filtering on `expires`) will hold fewer hosts
-than the list's count. That is intended: the count says who was seen, the expiry says who is still worth blocking.
+The window decides what counts as evidence: 3 attack events in 24 hours, 7 days or 30 days. The expiry decides how long
+the host stays: 3 days after its last attack for a consumer line, 7 for hosting, 5 when unknown, half as long again for a
+score of 60 or more. A host leaves every list, format and collection at `expires` (`valid_until` in STIX), so the files
+never hold an entry they say is stale. A malware URL leaves 14 days after it was last asked for.
 
 The malware URL files hold the raw URL, because a proxy or DNS filter needs it; only the site shows them defanged.
+
+## The notable feed
+
+`/feed/notable.atom` holds the last day's firsts: an exploit, a control command or a malware download nobody sent in the
+week before. Each entry names the sending address in its summary and carries its indicators as
+`<ioc:indicator type="ipv4-addr">` elements (`url` once the download address is on the malware URL list), so a
+threat-intelligence platform that reads feeds can extract them. Readers ignore those elements.
 
 ## Keeping a copy current
 

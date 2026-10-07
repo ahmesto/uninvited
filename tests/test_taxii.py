@@ -99,7 +99,7 @@ class ProtocolTests(unittest.TestCase):
         kinds = [o["type"] for o in doc["objects"]]
         self.assertEqual(kinds[0], "identity")
         self.assertEqual(kinds.count("indicator"), len(samples.rows()))
-        self.assertEqual({o["pattern"] for o in doc["objects"][1:]},
+        self.assertEqual({o["pattern"] for o in doc["objects"][1:] if o["type"] == "indicator"},
                          {f"[{'ipv6' if ':' in r['ip'] else 'ipv4'}-addr:value = '{r['ip']}']" for r in samples.rows()})
 
     def test_the_objects_are_exactly_the_ones_in_the_downloadable_bundle(self):
@@ -127,7 +127,7 @@ class ProtocolTests(unittest.TestCase):
                 break
             nxt = doc["next"]
             self.assertTrue(nxt)
-        self.assertEqual(pages, 4)                                   # identity + six hosts, two at a time
+        self.assertEqual(pages, -(-len(self.objects()["objects"]) // 2))   # every object, two at a time
         self.assertEqual(len(seen), len(set(seen)))
         self.assertEqual(set(seen), {o["id"] for o in self.objects()["objects"]})
 
@@ -142,25 +142,27 @@ class ProtocolTests(unittest.TestCase):
         self.assertNotIn("identity", [o["type"] for o in later])
 
     def test_match_filters(self):
-        indicators = [o for o in self.objects()["objects"] if o["type"] == "indicator"]
+        everything = self.objects()["objects"]
+        indicators = [o for o in everything if o["type"] == "indicator"]
         want = indicators[2]["id"]
         self.assertEqual([o["id"] for o in self.objects(**{"match[id]": want})["objects"]], [want])
         two = ",".join(o["id"] for o in indicators[:2])
         self.assertEqual(len(self.objects(**{"match[id]": two})["objects"]), 2)
         self.assertEqual(len(self.objects(**{"match[type]": "indicator"})["objects"]), len(indicators))
         self.assertEqual([o["type"] for o in self.objects(**{"match[type]": "identity"})["objects"]], ["identity"])
-        self.assertEqual(len(self.objects(**{"match[version]": "last"})["objects"]), len(indicators) + 1)
-        self.assertEqual(len(self.objects(**{"match[version]": "all"})["objects"]), len(indicators) + 1)
+        self.assertEqual(len(self.objects(**{"match[version]": "last"})["objects"]), len(everything))
+        self.assertEqual(len(self.objects(**{"match[version]": "all"})["objects"]), len(everything))
+        self.assertTrue({"attack-pattern", "relationship"} <= {o["type"] for o in everything})
         stamp = indicators[0]["modified"]
         self.assertEqual([o["id"] for o in self.objects(**{"match[version]": stamp})["objects"] if o["type"] == "indicator"
                           and o["modified"] == stamp][:1], [indicators[0]["id"]])
         self.assertEqual(self.objects(**{"match[version]": "2001-01-01T00:00:00.000Z"}).get("objects", []), [])
         self.assertEqual(self.objects(**{"match[spec_version]": "2.0"}).get("objects", []), [])
-        self.assertEqual(len(self.objects(**{"match[spec_version]": "2.1"})["objects"]), len(indicators) + 1)
+        self.assertEqual(len(self.objects(**{"match[spec_version]": "2.1"})["objects"]), len(everything))
 
     def test_the_manifest_lists_ids_versions_and_media_types(self):
         doc = self.get(f"/taxii2/root/collections/{self.cid}/manifest/").json()
-        self.assertEqual(len(doc["objects"]), len(samples.rows()) + 1)
+        self.assertEqual(len(doc["objects"]), len(self.objects()["objects"]))
         for m in doc["objects"]:
             self.assertEqual(set(m), {"id", "date_added", "version", "media_type"})
             self.assertEqual(m["media_type"], taxii.STIX_MEDIA)
@@ -419,14 +421,14 @@ class RealClientTests(unittest.TestCase):
         week = next(c for c in root.collections if c.title == taxii.COLLECTIONS["attackers-7d"][0])
         self.assertTrue(week.can_read and not week.can_write)
         env = week.get_objects()
-        self.assertEqual(len(env["objects"]), len(samples.rows()) + 1)
+        self.assertEqual(sum(o["type"] == "indicator" for o in env["objects"]), len(samples.rows()))
         self.assertEqual(env["more"], False)
 
     def test_every_object_is_valid_stix(self):
         week = self.server().api_roots[0].collections[1]
         env = week.get_objects()
         parsed = [stix2.parse(o, allow_custom=False, version="2.1") for o in env["objects"]]
-        self.assertEqual(sorted({p["type"] for p in parsed}), ["identity", "indicator"])
+        self.assertEqual(sorted({p["type"] for p in parsed}), ["attack-pattern", "identity", "indicator", "relationship"])
         patterns = {p["pattern"] for p in parsed if p["type"] == "indicator"}
         self.assertIn("[ipv4-addr:value = '198.51.100.20']", patterns)
         self.assertIn("[ipv6-addr:value = '2001:db8::7']", patterns)
@@ -438,12 +440,12 @@ class RealClientTests(unittest.TestCase):
         for page in as_pages(week.get_objects, per_request=2):
             ids += [o["id"] for o in page["objects"]]
         self.assertEqual(len(ids), len(set(ids)))
-        self.assertEqual(len(ids), len(samples.rows()) + 1)
+        self.assertEqual(len(ids), len(week.get_objects()["objects"]))
 
     def test_manifest_and_single_object_and_filters(self):
         week = self.server().api_roots[0].collections[1]
         manifest = week.get_manifest()
-        self.assertEqual(len(manifest["objects"]), len(samples.rows()) + 1)
+        self.assertEqual(len(manifest["objects"]), len(week.get_objects()["objects"]))
         indicator = next(m["id"] for m in manifest["objects"] if m["id"].startswith("indicator--"))
         one = week.get_object(indicator)
         self.assertEqual([o["id"] for o in one["objects"]], [indicator])

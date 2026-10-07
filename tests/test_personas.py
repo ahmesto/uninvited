@@ -322,7 +322,7 @@ class IntelTests(unittest.TestCase):
 
     def test_techniques_for_the_new_services(self):
         self.assertEqual(intel.tags({"CAM": 3}, {})[0], ["T1595"])
-        self.assertEqual(intel.tags({"CAM": 3}, {}, None, {"CAM": 3})[0], ["T1110", "T1595"])
+        self.assertEqual(intel.tags({"CAM": 3}, {}, None, {"CAM": 3})[0], ["T1110.001", "T1595"])
         self.assertEqual(intel.tags({"ROUTER": 3}, {"GPON Router Exploit": 3})[0], ["T1190"])
         for tid in ("T0858", "T0843"):
             self.assertIn(tid, intel.ICS_TECHNIQUES)
@@ -452,7 +452,7 @@ class FeedEndToEnd(unittest.TestCase):
         self.hit("93.184.216.51", "CAM", "Unclassified Probe", user="admin")
         r = self.row("93.184.216.51")
         self.assertIn("camera-bruteforce", r["tags"])
-        self.assertIn("T1110", r["attack_techniques"])
+        self.assertIn("T1110.001", r["attack_techniques"])
 
     def test_an_open_proxy_scanner_is_listed_as_a_scanner_not_an_exploiter(self):
         self.hit("93.184.216.52", "HTTP", "Open Proxy Probe")

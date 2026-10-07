@@ -17,6 +17,8 @@ Routine password guessing and generic probes are never notable. The module reads
 """
 from __future__ import annotations
 
+import hashlib
+import ipaddress
 import json
 import time
 from typing import Any
@@ -68,6 +70,12 @@ def _title(sig: tuple, proto: str) -> str:
     if sig[0] == "exploit":
         return sig[1]
     return f"AI tool call: {sig[1]}"
+
+
+def _sid(value: Any) -> int:
+    """A short id that stays the same across restarts (Python's hash() does not), so a feed reader
+    never sees the same entry twice."""
+    return int(hashlib.sha1(repr(value).encode()).hexdigest()[:8], 16) % 10**6
 
 
 def defang(url: str) -> str:
@@ -125,12 +133,15 @@ def _new_droppers(store, since: int, now: int) -> list[dict]:
                       (since, now))
     out = []
     for r in rows:
-        n = len(_loads(r["sources"], []))
+        sources = _loads(r["sources"], [])
+        n = len(sources)
         what = r["family"] or "malware"
-        out.append({"id": f"d{r['first_ts']}-{abs(hash(r['url'])) % 10**6}", "tag": "NEW DROPPER", "kind": "dropper",
+        # ip is the first host that sent it, so the card opens that host's evidence. url is raw and
+        # internal: the Atom feed uses it only once the URL is listed, and the API drops it.
+        out.append({"id": f"d{r['first_ts']}-{_sid(r['url'])}", "tag": "NEW DROPPER", "kind": "dropper",
                     "ts": r["first_ts"], "title": f"A {what} download was requested",
                     "meta": f"{defang(r['url'])} · asked for by {max(n, 1)} host{'s' if n > 1 else ''}",
-                    "count": r["hits"]})
+                    "ip": sources[0] if sources else None, "url": r["url"], "count": r["hits"]})
     return out
 
 
@@ -139,14 +150,20 @@ def _x(s: Any) -> str:
             .replace('"', "&quot;"))
 
 
-def atom(items: list[dict], brand: str, site: str, now: int) -> str:
+def _addr_type(ip: str) -> str:
+    return "ipv6-addr" if ipaddress.ip_address(ip).version == 6 else "ipv4-addr"
+
+
+def atom(items: list[dict], brand: str, site: str, now: int, listed_urls: frozenset | set = frozenset()) -> str:
     """An Atom feed of the notable events, newest first. Addresses are in it (they are public on the
-    site already); credentials never are."""
+    site already); credentials never are. Each entry also carries its indicators as ioc:indicator
+    elements, typed like STIX, for threat-intel platforms that read feeds: the sending address
+    always, the download URL raw only once it is on the malware URL list."""
     iso = lambda ts: time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(ts))  # noqa: E731
     base = f"https://{site}"
     head = [
         '<?xml version="1.0" encoding="utf-8"?>',
-        '<feed xmlns="http://www.w3.org/2005/Atom">',
+        f'<feed xmlns="http://www.w3.org/2005/Atom" xmlns:ioc="{base}/feed/ns/indicator">',
         f"<title>{_x(brand)}: worth a look</title>",
         f'<link href="{base}/feed/notable.atom" rel="self"/>',
         f'<link href="{base}/"/>',
@@ -159,14 +176,21 @@ def atom(items: list[dict], brand: str, site: str, now: int) -> str:
     for i in items:
         if i["tag"] == "ACTIVE NOW":   # the feed is for news; a repeat is not news
             continue
-        link =f"{base}/#ip={i['ip']}" if i.get("ip") else f"{base}/#intel-urls"
+        ip = i.get("ip")
+        link = f"{base}/#ip={ip}" if ip else f"{base}/#intel-urls"
+        summary = i["meta"] + (f" · from {ip}" if ip else "") + (f" ({i['count']} times)" if i.get("count", 1) > 1 else "")
+        iocs = [f'<ioc:indicator type="{_addr_type(ip)}">{_x(ip)}</ioc:indicator>'] if ip else []
+        if i.get("url") in listed_urls:
+            iocs.append(f'<ioc:indicator type="url">{_x(i["url"])}</ioc:indicator>')
         entries += [
             "<entry>",
             f"<title>{_x(i['tag'].title())}: {_x(i['title'])}</title>",
             f'<link href="{link}"/>',
             f"<id>tag:{_x(site)},2026:{_x(i['id'])}</id>",
             f"<updated>{iso(i['ts'])}</updated>",
-            f"<summary>{_x(i['meta'])}" + (f" ({i['count']} times)" if i.get("count", 1) > 1 else "") + "</summary>",
+            f'<category term="{_x(i["kind"])}"/>',
+            f"<summary>{_x(summary)}</summary>",
+            *iocs,
             "</entry>",
         ]
     return "\n".join(head + entries + ["</feed>"]) + "\n"
@@ -195,7 +219,7 @@ def notables(store, hours: int, now: int) -> list[dict]:
     fresh, active = _notable_events(store, since, now)
     items: list[dict] = []
     for w in fresh:
-        items.append({"id": f"n{w['ts']}-{abs(hash(w['sig'])) % 10**6}", "tag": "FIRST THIS WEEK", "kind": w["sig"][0],
+        items.append({"id": f"n{w['ts']}-{_sid(w['sig'])}", "tag": "FIRST THIS WEEK", "kind": w["sig"][0],
                       "ts": w["ts"], "title": _title(w["sig"], w["proto"]),
                       "meta": f"{w['proto']} · {w['country'] or w['iso'] or 'unknown'}",
                       "ip": w["ip"], "count": w["count"]})
@@ -205,7 +229,7 @@ def notables(store, hours: int, now: int) -> list[dict]:
     span = "hour" if hours == 1 else f"{hours} hours"
     for w in active:
         n, d = len(w["hosts"]), len(w["days"])
-        items.append({"id": f"a{w['ts']}-{abs(hash(w['sig'])) % 10**6}", "tag": "ACTIVE NOW", "kind": w["sig"][0],
+        items.append({"id": f"a{w['ts']}-{_sid(w['sig'])}", "tag": "ACTIVE NOW", "kind": w["sig"][0],
                       "ts": w["ts"], "title": _title(w["sig"], w["proto"]),
                       "meta": f"{w['proto']} · {n} host{'s' if n != 1 else ''} this {span} · seen on {d} of the last {LOOKBACK_DAYS + 1} days",
                       "ip": w["ip"], "count": w["count"]})

@@ -131,8 +131,15 @@ body:not([data-view="live"]) #t-probe{display:none}
 .hero-stats > span{white-space:nowrap}
 .hero-stats .sep{color:var(--faint);padding:0 8px}
 .hero-stats .atk{color:var(--red-t)}
-#whoami{font-size:12.5px;color:var(--label);white-space:nowrap}
+#whoami{font-size:12.5px;color:var(--label);white-space:nowrap;background:none;padding:0;
+  border-bottom:1px solid rgba(255,255,255,.25);line-height:1.3}
+#whoami:hover{color:var(--text);border-bottom-color:rgba(255,255,255,.5)}
+#whoami:disabled{border-bottom-color:transparent;color:var(--label);cursor:default}
 #whoami b{font-weight:400;color:var(--text)}
+/* Read by screen readers and search engines, not drawn. */
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+/* The sound only means something on Live. Off Live it stays visible while it is on, so it can be turned off. */
+body:not([data-view="live"]) #t-sound:not(.on){display:none}
 @media (max-width:1199px){#whoami{display:none}}
 
 /* ------------------------------ worth a look -------------------------- */
@@ -449,6 +456,13 @@ body:not([data-view="live"]) #t-probe{display:none}
 .hc .bar{display:flex;align-items:center;gap:8px}
 .hc .bar i{width:48px;height:3px;background:rgba(255,255,255,.1);display:block}
 .hc .bar i b{display:block;height:3px}
+/* Hosts list: a filter over every listed host, fifty rows at a time. */
+.hfilt{display:flex;gap:10px;align-items:center;padding:10px 18px;border-bottom:1px solid var(--rule)}
+.hfilt input{flex:1;min-width:0;background:transparent;border:1px solid var(--edge);color:var(--text);
+  font:inherit;font-size:12.5px;padding:7px 10px}
+.hfilt input:focus{outline:none;border-color:var(--red-t)}
+.hfilt input::placeholder{color:var(--dim)}
+.hmore{padding:12px 18px 0}
 .ov-urls .blk-b{padding:4px 20px 10px}
 .fl-ov{padding:13px 20px 14px;gap:8px 22px;font-size:12px}
 .fl-more{margin-left:auto;font-size:11.5px;color:var(--label)}
@@ -487,6 +501,7 @@ body:not([data-view="live"]) #t-probe{display:none}
 .cverow:last-child{border-bottom:none}
 .urow{display:flex;justify-content:space-between;gap:14px;padding:7px 0;border-bottom:1px solid var(--rule-soft);font-size:12px}
 .urow:last-child{border-bottom:none}
+.urow.un .u-url{color:var(--text2)}
 .u-url{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 .u-meta{color:var(--label);font-size:11.5px;white-space:nowrap}
 .cverow em{font-style:normal;color:var(--dim);font-family:var(--sans);font-size:10.5px}
@@ -575,7 +590,6 @@ details.smp summary{cursor:pointer;list-style:none}
 details.smp summary::-webkit-details-marker{display:none}
 details.smp summary .ptitle::before{content:"+ ";color:var(--label)}
 details.smp[open] summary .ptitle::before{content:"- ";color:var(--label)}
-.st-live .lnk{color:var(--text);font-size:12.5px;line-height:1.4}
 .lk{display:flex;gap:10px;padding:14px 18px 10px}
 .lk input{flex:1;min-width:0;height:38px;background:rgba(255,255,255,.03);
   border:1px solid rgba(255,255,255,.24);color:var(--text);font-family:var(--mono);
@@ -661,19 +675,7 @@ details.smp[open] summary .ptitle::before{content:"- ";color:var(--label)}
 .credit{color:var(--dim)}
 .credit a{color:var(--text2);border-bottom:1px solid rgba(255,255,255,.25)}
 
-.st-hero{display:flex;flex-wrap:wrap;gap:40px;padding:38px 0 48px;align-items:center}
-.st-l{flex:3 1 560px;min-width:0}
-.st-eye{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--red-t)}
-.st-h{font-size:34px;letter-spacing:-.5px;margin:16px 0 0}
-.st-lead{font-size:15px;color:var(--text2);margin:18px 0 0;max-width:640px}
-.st-btns{display:flex;flex-wrap:wrap;gap:12px;margin-top:28px}
-.st-go{padding:13px 22px;background:var(--red);color:#fff;font-weight:700;font-size:13px}
-.st-go:hover{background:var(--red-t);color:#fff}
-.st-alt{padding:13px 22px;border:1px solid var(--edge);color:var(--text);font-weight:700;font-size:13px}
-.st-live{display:flex;align-items:center;gap:8px;margin-top:18px;font-size:12.5px;color:var(--label)}
-.st-live i{width:6px;height:6px;border-radius:50%;background:#22c55e;flex:0 0 auto}
-.st-live b{font-weight:400;color:var(--text2)}
-.st-live a{color:var(--text);border-bottom:1px solid rgba(255,255,255,.3)}
+.st-hero{display:flex;flex-wrap:wrap;gap:40px;padding:6px 0 28px;align-items:center}
 .st-term{flex:2 1 380px;min-width:0}
 .st-code{padding:16px 20px 18px;font-size:12.5px;line-height:1.8;color:var(--text2);overflow-x:auto;white-space:nowrap}
 .st-p{color:#22c55e}.st-c{color:var(--dim)}
@@ -682,11 +684,9 @@ details.smp[open] summary .ptitle::before{content:"- ";color:var(--label)}
 .st-stats b{display:block;font-size:34px;font-weight:700;letter-spacing:-.02em;line-height:1}
 .st-stats b + span{display:block;margin-top:6px;font-size:12.5px;line-height:1.5;color:var(--label)}
 .st-h2{margin:56px 0 18px;font-size:20px;font-weight:700}
-@media (max-width:900px){.st-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.st-h{font-size:26px}}
+@media (max-width:900px){.st-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .sec-k::before,.pg-k::before{content:"";display:inline-block;width:6px;height:6px;
   background:var(--red);margin-right:9px;vertical-align:1px}
-.accbar{height:3px;background:var(--rule);margin-top:11px}
-.accbar i{display:block;height:100%;width:0;transition:width .5s ease-out}
 /* The tab people should click: a live count, and a dot until they have. */
 .tabn{margin-left:8px;font-family:var(--mono);font-size:10px;letter-spacing:0;color:var(--red-t);
   border:1px solid rgba(239,68,68,.55);padding:2px 5px;line-height:1;text-transform:none}
@@ -747,12 +747,6 @@ details.smp[open] summary .ptitle::before{content:"- ";color:var(--label)}
 .acch-row b{font-size:clamp(52px,6vw,76px);line-height:.95;font-weight:700;letter-spacing:-.03em;color:#22c55e}
 .acch-t{font-size:20px;line-height:1.35;max-width:430px;color:var(--text)}
 .acch-n{display:block;font-style:normal;font-size:11px;color:var(--dim);margin-top:10px}
-.acch-r{flex:1 1 300px;display:flex;flex-direction:column;border-left:1px solid var(--rule)}
-.acch-c{padding:14px 24px;border-bottom:1px solid var(--rule);flex:1}
-.acch-c:last-child{border-bottom:none}
-.acch-c b{display:inline;font-size:20px;font-weight:700}
-.acch-c span{display:block;margin-top:5px;font-size:12.5px;line-height:1.5;color:var(--label)}
-.acch-c em{font-style:normal;font-size:11px;color:var(--dim)}
 .trustl{display:flex;flex-wrap:wrap;gap:6px 28px;margin:0 0 22px;font-size:12.5px;color:var(--label)}
 .trustl b{color:var(--text2);font-weight:700;margin-right:4px}
 .acc-note{margin:0;padding:12px 18px 14px;border-top:1px solid var(--rule-soft)}
@@ -775,12 +769,26 @@ details.smp[open] summary .ptitle::before{content:"- ";color:var(--label)}
   #app{height:auto;min-height:100dvh}
   #bar{flex-wrap:wrap;gap:10px 12px;padding:12px 16px}
   .bar-l{flex:1 0 100%;flex-wrap:wrap;gap:10px 14px}
-  #tabs{flex-wrap:wrap;height:auto;max-width:100%}
-  #tabs a{height:30px;padding:0 10px}
-  .bar-r{gap:8px}
-  .bar-r{flex:1 0 100%;justify-content:space-between;flex-wrap:wrap}
+  .livedot{order:1;margin-left:auto}
+  /* One row of tabs that scrolls sideways, instead of two rows that push the page down. */
+  #tabs{order:2;flex:1 0 100%;height:auto;overflow-x:auto;scrollbar-width:none}
+  #tabs::-webkit-scrollbar{display:none}
+  #tabs a{flex:0 0 auto;height:32px;padding:0 11px}
+  .bar-r{flex:1 0 100%;gap:8px}
+  body:not([data-view="live"]) .bar-r{display:none}
   #t-probe{flex:1;justify-content:center}
-  .cv{margin-left:auto}
+  .bar-r .cv{display:none}
+  .phead{flex-wrap:wrap}
+  .phead .ptitle{overflow:visible;flex-shrink:0}
+  .hfilt{flex-wrap:wrap}
+  .hfilt input{flex:1 0 100%}
+  /* The number says the score; the bar is the first thing to give up its width. */
+  .hc{grid-template-columns:136px 46px minmax(0,1fr);gap:10px}
+  .hc .bar i{display:none}
+  .pnote{white-space:normal}
+  #look-bulk-t{white-space:normal}
+  .tg,.page .ptitle,.pnote,.e-isp,.tagr,.off-meta,.lcol h5,.lrow em,.sheet-body h4,.pp-state,.pg-k,.hm .hl,
+  .em3 h5,.pwlen-x,.cverow em,.beta,.drawer-body h4,.pill,.sec-k,.snipl,.wg,.vpill.sm,.uses th,.pact{font-size:11px}
   #hero{flex-direction:column;align-items:flex-start;gap:14px;padding:16px}
   .hero-r{width:100%;flex:0 0 auto}
   #look-bulk{flex-wrap:wrap}
@@ -811,7 +819,8 @@ details.smp[open] summary .ptitle::before{content:"- ";color:var(--label)}
   .cols3{grid-template-columns:1fr}
   .pg-h{font-size:24px}
   .tagline{display:none}
-  .subtabs{flex-wrap:wrap;overflow:visible;position:static}
+  .subtabs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;position:static}
+  .subtabs::-webkit-scrollbar{display:none}
   .subtabs.intel{gap:0 18px}
 }
 /* A short window (a laptop with the browser bar, a split screen) cannot hold the one-screen
@@ -856,7 +865,7 @@ details.smp[open] summary .ptitle::before{content:"- ";color:var(--label)}
       <div class="livedot"><i id="beacon"></i><span id="host">connecting</span></div>
     </div>
     <div class="bar-r">
-      <span id="whoami" hidden></span>
+      <button type="button" id="whoami" hidden title="What this server recorded from your address"></button>
       <button id="t-probe" title="See what you're exposing to the internet">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
              stroke-linecap="round" aria-hidden="true">
@@ -879,6 +888,7 @@ details.smp[open] summary .ptitle::before{content:"- ";color:var(--label)}
   </div>
 
   <div id="v-live" class="view on">
+    <h1 class="vh">I left a server open on purpose. Here is what knocked.</h1>
 
   <div id="hero">
     <div class="hero-l">
@@ -940,13 +950,12 @@ details.smp[open] summary .ptitle::before{content:"- ";color:var(--label)}
             <button class="tg" data-t="volume">By volume</button>
           </span>
           <span class="pnote" id="onfeed-note"></span>
-          <a class="pact" href="#intel" data-glyph="&rarr;">threat intel</a>
         </div>
         <div class="pbody">
           <div id="onfeed"></div>
           <div id="offenders" hidden></div>
         </div>
-        <div class="pfoot"><span id="hosts-foot-score">Highest score on the 24 hour feed &middot; <a href="#intel-hosts">all of them &rarr;</a></span><span id="hosts-foot-vol" hidden>Most events in the last day, listed or not</span></div>
+        <div class="pfoot"><span id="hosts-foot-score">Most active on the 24 hour feed &middot; <a href="#intel-hosts">all of them &rarr;</a></span><span id="hosts-foot-vol" hidden>Most events in the last day, listed or not</span></div>
       </div>
 
       <div class="sidesec" id="s-camp">
@@ -1000,13 +1009,8 @@ details.smp[open] summary .ptitle::before{content:"- ";color:var(--label)}
           <div class="acch-k">Measured accuracy &middot; recomputed hourly from the raw data</div>
           <div class="acch-row"><b class="d" id="acc-l1">&ndash;</b>
             <span class="acch-t">of hosts already on record for a week attacked again within 24 hours</span></div>
-          <em class="acch-n" id="acc-l1n">&nbsp;</em><div class="accbar" hidden><i id="acc-l1b"></i></div>
+          <em class="acch-n" id="acc-l1n">&nbsp;</em>
           <p class="fine acc-note" id="acc-note"></p>
-        </div>
-        <div class="acch-r">
-          <div class="acch-c"><b class="d" id="acc-l7">&ndash;</b><span>of those came back within 7 days</span><em id="acc-l7n">&nbsp;</em><div class="accbar" hidden><i id="acc-l7b"></i></div></div>
-          <div class="acch-c"><b class="d" id="acc-a1">&ndash;</b><span>of all hosts listed a day ago, within 24 hours</span><em id="acc-a1n">&nbsp;</em><div class="accbar" hidden><i id="acc-a1b"></i></div></div>
-          <div class="acch-c"><b class="d" id="acc-a7">&ndash;</b><span>of all hosts listed a week ago, within 7 days</span><em id="acc-a7n">&nbsp;</em><div class="accbar" hidden><i id="acc-a7b"></i></div></div>
         </div>
       </section>
 
@@ -1014,12 +1018,12 @@ details.smp[open] summary .ptitle::before{content:"- ";color:var(--label)}
         <span><b>Spoof-proof</b> TCP sessions only</span>
         <span><b>Earned</b> 3 or more real attack events</span>
         <span><b>Scanners apart</b> and their names confirmed</span>
-        <span><b>Ages out</b> 24h, 7d and 30d lists</span>
+        <span><b>Ages out</b> 3 to 11 days after the last attack</span>
       </div>
 
       <div class="ovrow">
         <section class="blk ov-top">
-          <div class="phead"><span class="ptitle">Highest score &middot; 7 days</span><span class="pnote">click a row for the evidence</span></div>
+          <div class="phead"><span class="ptitle">Most active &middot; 7 days</span><span class="pnote">click a row for the evidence</span></div>
           <div class="hc head"><span>Host</span><span>Score</span><span>What it did</span><span class="ev">Events</span></div>
           <div id="top-ov"></div>
           <div class="pfoot"><span id="top-ov-note"></span> &middot; <a href="#intel-hosts">all hosts</a></div>
@@ -1027,7 +1031,7 @@ details.smp[open] summary .ptitle::before{content:"- ";color:var(--label)}
         <section class="blk ov-urls">
           <div class="phead"><span class="ptitle">Malware infrastructure</span><span class="pnote" id="urls-ov-note">7 days</span></div>
           <div id="urls-ov" class="blk-b"></div>
-          <div class="pfoot">Shown defanged and never fetched. Listed when two hosts deliver a URL, or a host delivers its own copy.</div>
+          <div class="pfoot">Defanged, never fetched. Listed once two hosts deliver a URL, or a host its own copy. Grey: one host, not listed.</div>
         </section>
       </div>
 
@@ -1072,7 +1076,7 @@ details.smp[open] summary .ptitle::before{content:"- ";color:var(--label)}
         <div class="findrow" id="check">
         <section class="blk lkblk">
           <div class="phead"><span class="ptitle">Check any address</span>
-            <span class="pnote">is it on the feed, and why</span></div>
+</div>
           <form class="lk" id="lookup-form" autocomplete="off">
             <input id="lookup-ip" type="text" inputmode="text" spellcheck="false"
                    placeholder="Paste an IP address, IPv4 or IPv6" aria-label="IP address">
@@ -1111,8 +1115,12 @@ details.smp[open] summary .ptitle::before{content:"- ";color:var(--label)}
               <button class="wg" data-w="7d">7d</button>
               <button class="wg" data-w="30d">30d</button>
             </span></div>
+          <div class="hfilt"><input id="hfind" type="search" placeholder="Filter by address, tag, country or network"
+            aria-label="Filter the listed hosts" autocomplete="off" spellcheck="false">
+            <button class="pact" id="hcopy" type="button" data-glyph="&#10697;">copy these addresses</button></div>
           <div class="hc head"><span>Host</span><span>Score</span><span>What it did</span><span class="ev">Events</span></div>
           <div id="top"></div>
+          <div class="hmore"><button class="pact" id="hmore" type="button" data-glyph="&darr;" hidden>show more</button></div>
           <div class="pfoot"><span id="top-note"></span> &middot;
             <a href="/feed/attackers-24h.json" id="top-all" target="_blank" rel="noopener">this list as JSON &nearr;</a></div>
         </section>
@@ -1171,12 +1179,12 @@ details.smp[open] summary .ptitle::before{content:"- ";color:var(--label)}
         </section>
         <div class="cols3">
           <section class="blk">
-            <div class="phead"><span class="ptitle">What they are doing</span>
-              <span class="pnote">ATT&amp;CK, 24h</span></div>
+            <div class="phead"><span class="ptitle">ATT&amp;CK techniques</span>
+              <span class="pnote">24h</span></div>
             <div class="blk-b" id="techs"></div>
           </section>
           <section class="blk">
-            <div class="phead"><span class="ptitle">What they did</span><span class="pnote">tags, 24h</span></div>
+            <div class="phead"><span class="ptitle">Tags</span><span class="pnote">24h</span></div>
             <div class="blk-b" id="tagbars"></div>
           </section>
           <section class="blk">
@@ -1233,9 +1241,9 @@ details.smp[open] summary .ptitle::before{content:"- ";color:var(--label)}
         <div class="phead"><span class="ptitle">Where the bots were told to download from</span>
           <span class="pnote" id="urls-note">7 days</span></div>
         <div class="blk-b" id="urls"></div>
-        <p class="fine pad">Shown defanged and not clickable. These addresses come from exploit requests sent to this server,
-          each with a download command in it. A URL is listed once two different hosts deliver it, or a host delivers its own
-          copy. Nothing here has been fetched or checked, and the file names only hint at a family.</p>
+        <p class="fine pad">From exploit requests that carried a download command. Defanged, never fetched, and a file name only
+          hints at a family. A URL is listed once two different hosts deliver it, or a host delivers its own copy. Grey rows came
+          from one host and stay out of the files until a second one asks.</p>
       </section>
 
       </div>
@@ -1266,19 +1274,13 @@ details.smp[open] summary .ptitle::before{content:"- ";color:var(--label)}
 
 <main id="v-use" class="view page">
   <div class="wrap">
+    <h1 class="pg-h">Use the feed</h1>
+    <p class="pg-lead">No key, no signup. One command to start, then the list that fits.</p>
     <div class="st-hero">
-      <div class="st-l">
-        <div class="st-eye d">A honeypot that publishes its numbers</div>
-        <h1 class="pg-h st-h">I left a server open on purpose. Here is what knocked.</h1>
-        <p class="pg-lead st-lead">Over a million connections in 50 days, turned into a threat feed you can load into a
-          firewall or a threat intelligence platform. Nothing a visitor sends is ever executed.</p>
-        <div class="st-btns"><a class="st-go" href="#live">Watch it live &rarr;</a><a class="st-alt" href="#use-download">Get the feed</a></div>
-        <div class="st-live"><i></i><span><b class="d" id="st-rate">&hellip;</b> connections a minute right now &middot; latest worth a look: <button class="lnk" type="button" id="st-look">nothing new this hour</button></span></div>
-      </div>
       <section class="blk st-term" aria-label="Two commands">
         <div class="phead"><span class="ptitle">Two commands</span></div>
         <div class="st-code d" id="st-code"><div><span class="st-p">$</span> curl -s {{site}}/feed/attackers-24h.txt</div>
-          <div class="st-c"># addresses, highest score first</div></div>
+          <div class="st-c"># addresses, most active first</div></div>
       </section>
     </div>
 
@@ -1339,7 +1341,7 @@ details.smp[open] summary .ptitle::before{content:"- ";color:var(--label)}
         <div class="fl"><a href="/feed/attackers-24h.csv" target="_blank" rel="noopener">24h</a>
           <a href="/feed/attackers-7d.csv" target="_blank" rel="noopener">7d</a>
           <a href="/feed/attackers-30d.csv" target="_blank" rel="noopener">30d</a></div></div>
-      <div class="fmt"><h4>STIX 2.1</h4><p>Indicators with ATT&amp;CK and CVE references. For threat intel platforms.</p>
+      <div class="fmt"><h4>STIX 2.1</h4><p>Indicators linked to ATT&amp;CK techniques, CVEs and malware families. For threat intel platforms.</p>
         <div class="fl"><a href="/feed/attackers-24h.stix.json" target="_blank" rel="noopener">24h</a>
           <a href="/feed/attackers-7d.stix.json" target="_blank" rel="noopener">7d</a>
           <a href="/feed/attackers-30d.stix.json" target="_blank" rel="noopener">30d</a></div></div>
@@ -1351,7 +1353,7 @@ details.smp[open] summary .ptitle::before{content:"- ";color:var(--label)}
       <div class="fmt"><h4>TAXII 2.1 <em class="beta">beta</em></h4><p>Subscribe from a threat intel platform instead of downloading files. Six collections, read-only, no key.</p>
         <div class="fl"><a href="/taxii2/" target="_blank" rel="noopener">discovery</a>
           <button class="lnk" data-copy="https://{{site}}/taxii2/" data-glyph="&#10697;">copy URL</button></div></div>
-      <div class="fmt"><h4>Malware URLs</h4><p>Download addresses attackers asked this server to fetch, taken from botnet exploit requests. Listed from what was asked for, nothing is fetched. The files hold the raw URL, because a proxy or DNS filter needs it; only the page shows them defanged.</p>
+      <div class="fmt"><h4>Malware URLs</h4><p>Where botnets told this server to download from. Never fetched. The files hold raw URLs for proxy and DNS filters.</p>
         <div class="fl"><a href="/feed/malware-urls-24h.txt" target="_blank" rel="noopener">24h</a>
           <a href="/feed/malware-urls-7d.txt" target="_blank" rel="noopener">7d</a>
           <a href="/feed/malware-urls-30d.txt" target="_blank" rel="noopener">30d</a>
@@ -1464,7 +1466,7 @@ sudo iptables -I INPUT -m set --match-set uninvited src -j DROP</pre></div>
         <div class="blk-b usec">
           <p><b>Start with logging, not blocking.</b> Watch what would have been dropped for a day and check nothing you rely on is in it.</p>
           <p><b>Prefer the persistent list.</b> Most hosts on the shorter lists are one-day visits.</p>
-          <p><b>Mind the network type.</b> An address on a consumer ISP can be shared or handed to someone else next week. Each entry carries <code>host_type</code> and an <code>expires</code> time, so drop it then.</p>
+          <p><b>Mind the network type.</b> A consumer ISP address can be shared or reassigned, so it leaves the lists 3 days after its last attack instead of 7. <code>host_type</code> says which.</p>
           <p><b>Never block your own addresses,</b> and tell me if something legitimate is listed. Open it on the Threat Intel tab and press report.</p>
         </div>
       </section>
@@ -1882,18 +1884,20 @@ with open(STATE, "w") as f:
 
       <h4>What gets on the feed</h4>
       <p>An address is listed when it attacked, not when it looked. It has to be a real TCP
-        session, because a UDP source address can be forged and I will not put a victim on
-        a block list. It has to go past knocking: guess a login, send an exploit, ask for a
-        relay. And it has to do that at least three times. Shodan and Censys get their own
-        list, and so do Tor exits, so neither pollutes the attacker feed. A name in reverse DNS
-        proves nothing, because anyone can write anything into their own, so a scanner's name has to
-        resolve back to its address before I believe it. A scanner I believed on its name alone is an
-        attacker from the moment it tries a password.</p>
+        session, because a UDP source can be forged and I will not put a victim on a block list.
+        It has to guess a login, send an exploit or ask for a relay, at least three times.
+        Research scanners and Tor exits get their own lists. A scanner's name only counts if it
+        resolves back to its address, and a scanner that tries a password is an attacker.</p>
+
+      <h4>How long it stays</h4>
+      <p>An attacker leaves every list 3 days after its last attack if it is on a consumer line,
+        7 if it is a server, and half as long again with a score of 60 or more. <code>expires</code>
+        says when. Each list is ordered by score, halved for every three quiet days, so the most
+        active hosts come first.</p>
 
       <h4>The score</h4>
-      <p>Zero to a hundred, and the same address carries the same score in every file. The
-        whole formula is four signals and it lives in one short file of tables and
-        arithmetic, so you can read it and argue with it.</p>
+      <p>Zero to a hundred, the same in every file. Four signals, in one short file of tables
+        and arithmetic you can read and argue with.</p>
       <table>
         <tr><td>Volume</td><td>10 to 40 points at 3, 10, 50 and 200 attack events in 30 days</td></tr>
         <tr><td>Breadth</td><td>10 for two protocols, 20 for three or more</td></tr>
@@ -1902,36 +1906,26 @@ with open(STATE, "w") as f:
       </table>
 
       <h4>Tags</h4>
-      <p>Every attacker carries plain tags for what it did, like ssh-bruteforce,
-        telnet-bruteforce and rdp-scan, and each has its own list you can pull. They come from
-        fixed rules. Behavior also maps to MITRE ATT&amp;CK, and a CVE tag only appears when a
-        request matches exactly one vulnerability, which today means four: Log4Shell, Laravel
-        Ignition, Shellshock and PHPUnit. No model decides any of it.</p>
+      <p>Every attacker carries plain tags for what it did, like ssh-bruteforce and rdp-scan,
+        and the main ones have their own list. Behavior maps to MITRE ATT&amp;CK down to the
+        sub-technique, and a CVE only appears when a request matches exactly one vulnerability.
+        Fixed rules decide all of it, no model.</p>
 
       <h4>Malware URLs</h4>
-      <p>When a botnet exploits a camera or a router, the same request often carries a download
-        command. I read the address out of it and list it, but only when two different hosts
-        delivered it, or when the host that sent it is the host it points at. That way one request
-        cannot get a legitimate address blocked. I never fetch any of them. They are listed from
-        what was asked for, not from what they serve, and a file name only hints at a family.</p>
+      <p>When a botnet exploits a camera or a router, the request often carries a download
+        command. I list that address once two different hosts deliver it, or the host that sent it
+        is the host it points at, so one request cannot get a legitimate address blocked. I never
+        fetch them, and a file name only hints at a family.</p>
 
       <h4>Who you might block</h4>
-      <p>Each host is marked hosting, ISP or unknown, guessed from the network's name. A
-        hosting address is usually one customer's server, so blocking it is low risk. A consumer
-        ISP address can be shared or handed to someone else next week, so it gets a shorter
-        expiry and a warning. It is a guess, and the files say so. Every entry also carries an
-        expiry. If you keep your own copy of a list, drop the entry then.</p>
-      <p>The expiry and the lists answer different questions. A list holds every host seen in its window:
-        24 hours, 7 days or 30. The expiry is advice on how long to keep blocking, a few days after the last
-        activity. So a host can still be on the 30 day list with an expiry already past, and most of that list
-        is. A platform that honours the expiry, or <code>valid_until</code> in STIX, will hold fewer hosts than
-        the list's count, on purpose.</p>
+      <p>Each host is marked hosting, ISP or unknown, from its network number or name. A hosting
+        address is usually one customer's server, so blocking it is low risk. A consumer ISP address
+        can be shared or reassigned, so it leaves the lists sooner. It is a guess, and the files say so.</p>
 
       <h4>How often it is right</h4>
-      <p>I measure it. Of the hosts listed a day ago and a week ago, the Threat Intel tab
-        shows how many attacked this server again since. One server sees a small slice of the
-        internet, so the number is a floor, not a verdict. What it does show is which hosts are
-        worth blocking. I would rather publish a number that can go down than a promise.</p>
+      <p>I measure it. The Threat Intel tab shows how many hosts listed a day and a week ago
+        attacked this server again since. One server sees a small slice of the internet, so the
+        number is a floor. I would rather publish a number that can go down than a promise.</p>
 
       <h4>Never listed</h4>
       <p>Public DNS resolvers, the big search crawlers, private and shared address space, and
@@ -1947,7 +1941,7 @@ with open(STATE, "w") as f:
 </main>
 
   <div id="foot">
-    <span><span class="d" id="zulu">&hellip;</span> UTC</span>
+    <span class="d" id="zulu">&hellip;</span>
     <span class="credit">{{credit}}</span>
     <span><b class="d" id="m-armed">0</b> <span id="m-armed-s">services</span> armed &middot; nothing here grants access &middot; no attacker input is ever executed</span>
   </div>
@@ -1965,7 +1959,7 @@ const esc = v => String(v == null ? "" : v)
 const nfmt = n => Number(n || 0).toLocaleString("en-US");
 const clock = ts => {
   const d = new Date((ts || 0) * 1000), p = n => String(n).padStart(2, "0");
-  return p(d.getHours()) + ":" + p(d.getMinutes()) + ":" + p(d.getSeconds());
+  return p(d.getUTCHours()) + ":" + p(d.getUTCMinutes()) + ":" + p(d.getUTCSeconds());
 };
 
 // Color is the protocol. Classification is carried by weight instead: a
@@ -1990,7 +1984,6 @@ const S = {
 function paintHead(){
   $("#m-total").textContent = nfmt(S.total);
   $("#m-rate").textContent  = Number(S.rate).toFixed(1);
-  $("#st-rate").textContent = Number(S.rate).toFixed(1);
   $("#st-total").textContent = S.total >= 1e6 ? (S.total / 1e6).toFixed(1) + "M" : S.total >= 1e3 ? Math.round(S.total / 1e3) + "k" : nfmt(S.total);
   $("#st-days").textContent = nfmt(Math.max(1, Math.floor(S.uptime / 1440)));
   $("#st-armed").textContent = S.protocols.length;
@@ -2021,7 +2014,11 @@ function drawWhoami(){
   const w = S.whoami;
   if(!w || !w.seen || !w.actor){ box.hidden = true; return; }
   const a = w.actor;
-  box.innerHTML = '<b class="d">' + nfmt(a.hits) + "</b> from your address";
+  box.innerHTML = '<b class="d">' + nfmt(a.hits) + "</b> knock" + (a.hits === 1 ? "" : "s") + " from you";
+  // A click opens the same evidence as any other address: what this server recorded from yours.
+  // Only for a real address: a hidden one comes back rewritten and has nothing to open.
+  if(/^[0-9a-f.:]+$/i.test(w.ip || "")) box.dataset.ip = w.ip; else delete box.dataset.ip;
+  box.disabled = !box.dataset.ip;
   box.hidden = false;
 }
 
@@ -2051,17 +2048,10 @@ function lookAgo(ts){
 }
 
 function drawLook(items){
-  const look = $("#st-look");
-  if(look){
-    const news = items.filter(i => i.tag !== "ACTIVE NOW");
-    look.textContent = news.length ? news[0].title : "nothing new this hour";
-    if(news.length && news[0].ip) look.dataset.ip = news[0].ip; else delete look.dataset.ip;
-    look.disabled = !(news.length && news[0].ip);
-  }
   const box = $("#look-cards");
   $("#look").classList.toggle("one", items.length <= 1);
   if(!items.length){
-    box.innerHTML = '<div class="nc"><span class="nc-top"><span class="nc-tag">NOTHING NEW THIS WEEK</span></span>' +
+    box.innerHTML = '<div class="nc"><span class="nc-top"><span class="nc-tag">QUIET HOUR</span></span>' +
       '<span class="nc-title">No exploit, control command or tool call</span>' +
       '<span class="nc-meta">only routine guessing and probing this hour</span></div>';
     return;
@@ -2354,11 +2344,14 @@ function loadLand(url){
     paintMap();
   });
 }
-// Coarse outline first so the globe appears immediately, then the detailed
-// coastline once it arrives. 110m turns blocky past about 2x zoom.
-loadLand("/static/vendor/land-110m.json")
-  .then(() => loadLand("/static/vendor/land-50m.json"))
-  .catch(() => {});
+// The coarse outline draws the globe. The detailed coastline (half a megabyte) is fetched only
+// when someone zooms in, because 110m only turns blocky past about 1.5x.
+let landDetail = null;
+loadLand("/static/vendor/land-110m.json").catch(() => {});
+function wantDetail(){
+  if(landDetail || globe.zoom < 1.5) return;
+  landDetail = loadLand("/static/vendor/land-50m.json").catch(() => { landDetail = null; });
+}
 
 function sizeMap(){
   const box = cv.parentElement;
@@ -2588,8 +2581,7 @@ function paintMap(){
     ctx.globalAlpha = 1;
   }
   drawCallouts(now);
-  $("#map-note").textContent = (dots.length ? nfmt(dots.length) + " origins" : "no recent origins") +
-    " \u00b7 drag to rotate";
+  $("#map-note").textContent = dots.length ? nfmt(dots.length) + " origins" : "no recent origins";
 }
 
 function addDot(k){
@@ -2661,6 +2653,7 @@ function wireMap(){
     if(!e.ctrlKey) return;              // a plain wheel scrolls the page, like every map
     e.preventDefault();
     globe.zoom = Math.max(1, Math.min(4, globe.zoom * (e.deltaY < 0 ? 1.15 : 1 / 1.15)));
+    wantDetail();
     paintMap();
   }, {passive: false});
 
@@ -3043,16 +3036,20 @@ function loadExtras(){
 
 const TECH_NAMES = {
   "T1110": "Brute Force",
+  "T1110.001": "Password Guessing",
+  "T1110.003": "Password Spraying",
   "T1190": "Exploit Public-Facing Application",
+  "T1105": "Ingress Tool Transfer",
   "T1021.001": "Remote Desktop Protocol",
   "T1595": "Active Scanning",
   "T1595.002": "Vulnerability Scanning",
+  "T1595.003": "Wordlist Scanning",
   "T1692.001": "Command Message (ICS)",
   "T0888": "System Information Discovery (ICS)",
   "T0801": "Monitor Process State (ICS)",
 };
 
-// The four CVEs the signatures can name unambiguously. Mirrors intel.py.
+// The CVEs the signatures can name unambiguously. Mirrors intel.py.
 const CVE_NAMES = {
   "CVE-2021-44228": "Log4Shell",
   "CVE-2021-3129": "Laravel Ignition",
@@ -3139,7 +3136,7 @@ function drawOnFeed(idx){
   const rows = ((idx.top || {})["24h"] || []).slice(0, 12);
   const total = listCount(idx, "attackers-24h");
   $("#onfeed-note").textContent = "";
-  $("#hosts-foot-score").innerHTML = total == null ? "Highest score on the 24 hour feed" :
+  $("#hosts-foot-score").innerHTML = total == null ? "Most active on the 24 hour feed" :
     rows.length + " of " + nfmt(total) + " listed &middot; " + nfmt(idx.new_24h) + " new today &middot; " +
     '<a href="#intel-hosts">all of them &rarr;</a>';
   const day = 86400000, nowMs = Date.now();
@@ -3281,9 +3278,7 @@ function renderEvidence(d){
   const cell = (k, v) => v ? "<div><small>" + esc(k) + "</small>" + esc(v) + "</div>" : "";
   html += "<h4>What the feed says</h4><div class=\"ev-grid\">" +
     cell("Listed on", listedOn.length ? listedOn.join(", ") + " feeds" : "not on the feed") +
-    cell("Leaves the lists", listedOn.length && a.last_ts ? stamp(a.last_ts + 30 * 86400).slice(0, 10) + ", if quiet" : "") +
-    cell("Suggested expiry", d.expires ? d.expires.slice(0, 10) + (Date.parse(d.expires) < Date.now() ? " (passed)" : "") +
-      ", for your own copy" : "") +
+    cell("Leaves the lists", listedOn.length && d.expires ? d.expires.slice(0, 10) + ", if quiet" : "") +
     cell("First seen", stamp(a.first_ts) + " UTC") + cell("Last seen", stamp(a.last_ts) + " UTC") +
     cell("Host type", !d.host_type ? "" : d.host_type === "unknown" ? "not classified" : d.host_type) +
     cell("Risk of blocking others", !d.collateral_risk ? "" : d.collateral_risk === "unknown" ? "not classified" : d.collateral_risk) +
@@ -3494,18 +3489,22 @@ const defang = u => String(u).replace(/^(\w+):\/\/([^\/]+)/, (m, s, h) =>
   s.replace(/^http/i, "hxxp").replace(/^ftp/i, "fxp") + "://" + h.replace(/\./g, "[.]"));
 
 function loadUrls(){
-  fetch("/feed/malware-urls-7d.json").then(r => r.ok ? r.json() : Promise.reject()).then(d => {
-    const rows = (d.indicators || []).slice(0, 8);
+  const once = fetch("/api/unconfirmed-urls").then(r => r.ok ? r.json() : {urls: []}).catch(() => ({urls: []}));
+  Promise.all([fetch("/feed/malware-urls-7d.json").then(r => r.ok ? r.json() : Promise.reject()), once]).then(([d, u]) => {
+    const rows = (d.indicators || []).slice(0, 8), grey = u.urls || [];
     $("#urls-note").textContent = nfmt(d.count) + " listed, 7 days";
-    $("#urls-ov-note").textContent = d.count ? nfmt(d.count) + " listed, 7 days" : "the list is new";
+    $("#urls-ov-note").textContent = nfmt(d.count) + " listed, 7 days";
     const row = i => '<div class="urow"><span class="u-url d" style="color:var(--red-t)" title="' + esc(defang(i.url)) + '">' + esc(defang(i.url)) + "</span>" +
       '<span class="u-meta d">' + (i.family_hint ? esc(i.family_hint) + " &middot; " : "") +
       nfmt(i.sources) + (i.sources === 1 ? " host" : " hosts") + " &middot; " + esc(ago(i.last_seen)) + "</span></div>";
-    const none = '<div class="blank">None yet. The list fills from exploit requests that carry a download command, ' +
-      "usually aimed at the camera and router decoys. A URL is listed once two different hosts deliver it, or a host " +
-      'delivers its own. To hear when one appears, subscribe to <a href="/feed/notable.atom" target="_blank" rel="noopener">notable.atom</a>.</div>';
-    $("#urls").innerHTML = rows.map(row).join("") || none;
-    $("#urls-ov").innerHTML = rows.slice(0, 4).map(row).join("") || none;
+    // Already defanged by the server. A click opens the host that sent it.
+    const once1 = i => '<div class="urow un' + (i.sent_by ? ' clk" role="button" tabindex="0" data-ip="' + esc(i.sent_by) : "") + '">' +
+      '<span class="u-url d" title="' + esc(i.url) + '">' + esc(i.url) + "</span>" +
+      '<span class="u-meta d">one host, not listed &middot; ' + esc(ago(i.last_seen)) + "</span></div>";
+    const none = '<div class="blank">None this week. Subscribe to <a href="/feed/notable.atom" target="_blank" rel="noopener">notable.atom</a> to hear when one appears.</div>';
+    $("#urls").innerHTML = (rows.map(row).join("") + grey.map(once1).join("")) || none;
+    const ov = rows.slice(0, 4);
+    $("#urls-ov").innerHTML = (ov.map(row).join("") + grey.slice(0, Math.max(0, 4 - ov.length)).map(once1).join("")) || none;
   }).catch(() => { $("#urls").innerHTML = $("#urls-ov").innerHTML = '<div class="blank">Could not load the list.</div>'; });
 }
 
@@ -3696,7 +3695,7 @@ function paintIntel(idx){
   const tries = ((idx.top || {})["24h"] || []).slice(0, 3);
   const n24 = listCount(idx, "attackers-24h");
   $("#st-code").innerHTML = '<div><span class="st-p">$</span> curl -s {{site}}/feed/attackers-24h.txt</div>' +
-    '<div class="st-c"># ' + (n24 == null ? "" : nfmt(n24) + " addresses, ") + "highest score first</div>" +
+    '<div class="st-c"># ' + (n24 == null ? "" : nfmt(n24) + " addresses, ") + "most active first</div>" +
     tries.map(i => "<div>" + esc(i.ip) + "</div>").join("") +
     (tries[0] ? '<div style="margin-top:8px"><span class="st-p">$</span> curl -s .../api/lookup?ip=' + esc(tries[0].ip) + " | jq .tags</div>" +
       '<div style="color:var(--text)">' + esc(JSON.stringify(tries[0].tags || [])) + "</div>" : "");
@@ -3754,22 +3753,13 @@ function paintAccuracy(idx){
   // nothing rather than a block of dashes.
   $("#acc").hidden = !(d.listed || w.listed);
   const rate = v => (v && v.rate != null) ? Math.round(v.rate * 100) + "%" : "\u2013";
-  const of = v => (v && v.listed) ? nfmt(v.returned) + " of " + nfmt(v.listed) : "\u00a0";
-  const cell = (id, v, color) => {
-    $("#acc-" + id).textContent = rate(v);
-    $("#acc-" + id + "n").textContent = of(v);
-    const bar = $("#acc-" + id + "b");
-    bar.style.width = (v && v.rate != null ? Math.round(v.rate * 100) : 0) + "%";
-    bar.style.background = color;
-  };
-  cell("a1", d, "#f59e0b");  cell("a7", w, "#f59e0b");
-  cell("l1", d.long_standing, "#ef4444");  cell("l7", w.long_standing, "#ef4444");  const ls = (w.long_standing || {}).rate, all = w.rate;
-  let note = "One server sees a small slice of the internet, so these rates are a floor, not a verdict. ";
-  if(ls != null && all != null && ls > all * 1.2)
-    note = "Most hosts on the list are short visits. The ones already on record for a week come back " +
-      "far more often, so if you only want to block hosts that keep coming, use the " +
-      '<a href="/feed/tag-persistent-7d.txt" target="_blank" rel="noopener">persistent list</a>. ' + note;
-  $("#acc-note").innerHTML = note + "Measured " + esc(ago(p.measured_at || idx.generated)) + ".";
+  const ls = d.long_standing || {};
+  $("#acc-l1").textContent = rate(ls);
+  $("#acc-l1n").textContent = ls.listed ? nfmt(ls.returned) + " of " + nfmt(ls.listed) : "\u00a0";
+  // One line for the rest, so the headline stays the headline.
+  $("#acc-note").innerHTML = esc(rate(w.long_standing)) + " came back within 7 days. Of every listed host: " +
+    esc(rate(d)) + " within a day, " + esc(rate(w)) + " within a week. One server sees a slice of the internet, " +
+    'so these are floors. <a href="#build-feed">How it is measured</a>';
 }
 
 // One row style for a listed host, on the overview and on the Hosts tab.
@@ -3785,14 +3775,22 @@ function hostRow(i, withNet){
 }
 
 // The catalog carries the top 15 per window; the Hosts list and the Timeline want them all, so they
-// read the list file itself, once per window every few minutes, highest score first.
+// read the list file itself, once per window every few minutes, in its own order: most active first.
 const TOP_FILES = {};
-const TOP_MAX = 400;
+const HOST_STEP = 50;
+let hostShown = HOST_STEP, hostQuery = "", hostMatches = [];
+// Every word has to appear somewhere in the row: "ssh KR", "45.135", "persistent hosting".
+function hostMatch(i, q){
+  if(!q) return true;
+  const hay = [i.ip, i.country, i.network, i.host_type].concat(i.tags || [], i.attack_techniques || [],
+    i.cves || [], i.protocols || []).join(" ").toLowerCase();
+  return q.split(/\s+/).every(w => hay.includes(w));
+}
 function hostList(win){
   const have = TOP_FILES[win];
   if(have && Date.now() - have.at < 300000) return Promise.resolve(have.rows);
   return fetch("/feed/attackers-" + win + ".json").then(r => r.ok ? r.json() : Promise.reject()).then(d => {
-    const rows = (d.indicators || []).slice().sort((a, b) => (b.score || 0) - (a.score || 0) || (b.events || 0) - (a.events || 0));
+    const rows = d.indicators || [];
     TOP_FILES[win] = {at: Date.now(), rows};
     return rows;
   });
@@ -3803,11 +3801,18 @@ function drawTop(){
   $("#top-all").setAttribute("href", "/feed/attackers-" + win + ".json");
   const paint = rows => {
     if(feedWin !== win) return;
-    const shown = rows.slice(0, TOP_MAX);
-    $("#top-note").textContent = (shown.length < rows.length ? "the " + nfmt(shown.length) + " highest of " : "all ") +
-      nfmt(rows.length) + " hosts on the " + win + " list · click a row for the evidence";
+    const q = hostQuery.trim().toLowerCase();
+    hostMatches = rows.filter(i => hostMatch(i, q));
+    const shown = hostMatches.slice(0, hostShown), left = hostMatches.length - shown.length;
+    $("#top-note").textContent = (q ? nfmt(hostMatches.length) + " of " + nfmt(rows.length) + " hosts on the " + win + " list match" :
+      (left ? "the first " + nfmt(shown.length) + " of " : "all ") + nfmt(rows.length) + " hosts on the " + win + " list") +
+      " · click a row for the evidence";
     $("#top").innerHTML = shown.map(i => hostRow(i, true)).join("") ||
-      '<div class="blank" style="padding:14px 20px">Nothing listed yet.</div>';
+      '<div class="blank" style="padding:14px 20px">' + (q ? "No listed host matches." : "Nothing listed yet.") + "</div>";
+    $("#hmore").hidden = left <= 0;
+    $("#hmore").textContent = "show " + nfmt(Math.min(HOST_STEP, left)) + " more";
+    $("#hcopy").textContent = "copy " + nfmt(hostMatches.length) + " address" + (hostMatches.length === 1 ? "" : "es");
+    $("#hcopy").disabled = !hostMatches.length;
   };
   const have = TOP_FILES[win];
   if(!have || Date.now() - have.at >= 300000){
@@ -3822,10 +3827,8 @@ function drawTop(){
 
 // One bar per listed host, first event to last, over a shared time axis. The same list file as
 // the Hosts tab; a click opens the same evidence drawer, where every event carries its own time.
-// Rows are the hosts that first appeared inside the window, highest score first; if that leaves
-// room, the highest-scoring hosts already active before the window fill it. Hosts answers "who
-// are the worst", this answers "who showed up, and how long did they stay". Drawn in order of
-// first sighting so the board reads as time.
+// Rows are the hosts that first appeared inside the window, in list order; if that leaves room,
+// hosts already active before the window fill it. Drawn in order of first sighting.
 const TL_MAX = 80, TL_HOURS = {"24h": 24, "7d": 168, "30d": 720};
 let tlWin = "7d", tlReq = 0, TL_PINS = null;
 const tlHot = h => (Number(h.score) || 0) >= 80 || (h.tags || []).includes("malware-delivery");
@@ -3859,7 +3862,7 @@ function drawTimeline(){
     const now = Date.now(), start = now - TL_HOURS[win] * 3600000, span = now - start;
     const pct = t => Math.max(0, Math.min(100, (t - start) / span * 100)).toFixed(2);
     const all = rows.map(h => ({...h, fs: Date.parse(h.first_seen) || 0, ls: Date.parse(h.last_seen) || 0})).filter(h => h.ls);
-    const arrived = all.filter(h => h.fs >= start), carried = all.filter(h => h.fs < start);   // rows are already by score
+    const arrived = all.filter(h => h.fs >= start), carried = all.filter(h => h.fs < start);   // rows are in list order
     const hosts = arrived.slice(0, TL_MAX).concat(carried.slice(0, Math.max(0, TL_MAX - arrived.length)))
       .sort((a, b) => a.fs - b.fs || a.ls - b.ls);
     const ticks = tlTicks(start, now);
@@ -3896,7 +3899,7 @@ function drawTimeline(){
     }).join("") || '<div class="blank" style="padding:14px 20px">Nothing listed yet.</div>';
     const hot = hosts.filter(tlHot).length, came = hosts.filter(h => h.fs >= start).length;
     $("#tl-note").textContent = (hosts.length < rows.length ? hosts.length + " of " : "all ") + nfmt(rows.length) +
-      " hosts on the " + win + " list, highest score first: " + came + " arrived in the window" +
+      " hosts on the " + win + " list, most active first: " + came + " arrived in the window" +
       (hosts.length - came ? ", " + (hosts.length - came) + " already here" : "") + " · in order of first sighting" +
       (hot ? " · " + hot + " in red" : "") + " · times are UTC";
   }).catch(() => {
@@ -3920,7 +3923,7 @@ function loadIntelCampaigns(){
       const creds = (c.creds || []).slice(0, 6).map(x => '<span class="tagr">' + esc(x) + "</span>").join("");
       return '<div class="camp-block"><div class="camp-id d">' + esc(campId(c)) + "</div>" +
         '<div class="camp-line">' + esc(campSize(c)) + ", " + esc(c.phrase) +
-        (c.groups > 1 ? " (the grouping caps at " + CAMP_CAP + " hosts, so this list came back as " + c.groups + " groups)" : "") + "</div>" +
+        "</div>" +
         (c.basis ? '<div class="camp-fp">grouped by ' + esc(c.basis) + "</div>" : "") +
         (c.hassh ? '<div class="camp-fp">same SSH client build <b class="d">' + esc(c.hassh) + "</b></div>" : "") +
         (creds ? '<div class="ev-tags">' + creds + "</div>" : "") + "</div>";
@@ -4177,10 +4180,22 @@ $("#skip").addEventListener("click", e => {
 $$(".wg").forEach(btn => {
   btn.onclick = () => {
     feedWin = btn.dataset.w;
+    hostShown = HOST_STEP;
     $$(".wg").forEach(b => b.classList.toggle("on", b === btn));
     drawTop();
   };
 });
+$("#hfind").oninput = e => { hostQuery = e.target.value; hostShown = HOST_STEP; drawTop(); };
+$("#hmore").onclick = () => { hostShown += HOST_STEP; drawTop(); };
+// Every matching address, not only the rows on screen: a filter plus this button is a blocklist.
+$("#hcopy").onclick = e => {
+  const b = e.currentTarget, label = b.textContent;
+  try{
+    navigator.clipboard.writeText(hostMatches.map(i => i.ip).join("\n") + "\n").then(() => {
+      b.textContent = "copied"; setTimeout(() => { b.textContent = label; }, 1400);
+    }, () => {});
+  }catch(err){}
+};
 $("#copy-sample").onclick = e => {
   const b = e.currentTarget, label = b.textContent;
   try{
