@@ -24,7 +24,7 @@ import time
 from typing import Any
 
 from .core import PROTO_LABELS
-from .intel import GENERIC_EXPLOITS
+from .intel import GENERIC_EXPLOITS, protected
 
 LOOKBACK_DAYS = 7
 MAX_ROWS = 3000
@@ -179,7 +179,7 @@ def atom(items: list[dict], brand: str, site: str, now: int, listed_urls: frozen
         ip = i.get("ip")
         link = f"{base}/#ip={ip}" if ip else f"{base}/#intel-urls"
         summary = i["meta"] + (f" · from {ip}" if ip else "") + (f" ({i['count']} times)" if i.get("count", 1) > 1 else "")
-        iocs = [f'<ioc:indicator type="{_addr_type(ip)}">{_x(ip)}</ioc:indicator>'] if ip else []
+        iocs = [f'<ioc:indicator type="{_addr_type(ip)}">{_x(ip)}</ioc:indicator>'] if ip and not protected(ip) else []
         if i.get("url") in listed_urls:
             iocs.append(f'<ioc:indicator type="url">{_x(i["url"])}</ioc:indicator>')
         entries += [

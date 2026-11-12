@@ -38,6 +38,10 @@ async def run(config_path: str) -> None:
 
     store = Store(cfg["database"])
     geo = Geo(cfg["geoip"].get("city_db", ""), cfg["geoip"].get("asn_db", ""))
+    # The operator's own connection is shown as "this server" and never gets a place.
+    hidden = frozenset(str(a).strip() for a in ((cfg["dashboard"] or {}).get("hide") or []))
+    if store.forget_places(hidden):
+        log.info("cleared the stored place of the hidden addresses")
     cls_cfg = cfg.get("classify") or {}
     classifier = Classifier(
         enable_rdns=cls_cfg.get("rdns", True),
@@ -48,7 +52,7 @@ async def run(config_path: str) -> None:
 
     async def emit(knock: Knock) -> None:
         """Enrich, classify, persist, broadcast. One funnel for every listener."""
-        for key, value in geo.lookup(knock.ip).items():
+        for key, value in (geo.nowhere() if knock.ip in hidden else geo.lookup(knock.ip)).items():
             setattr(knock, key, value)
         verdict = await classifier.classify(knock.ip)
         if (verdict["kind"] == "research" and not verdict["confirmed"]
@@ -145,6 +149,7 @@ async def run(config_path: str) -> None:
     prune_task = asyncio.create_task(pruner())
     tor_task = asyncio.create_task(tor_refresher())
     feed_task = asyncio.create_task(feed_refresher())
+    warm_task = asyncio.create_task(hub.keep_warm())
 
     app = build_app(cfg, store, hub, feeds)
     server = uvicorn.Server(
@@ -179,7 +184,8 @@ async def run(config_path: str) -> None:
     prune_task.cancel()
     tor_task.cancel()
     feed_task.cancel()
-    for task in (prune_task, tor_task, feed_task):
+    warm_task.cancel()
+    for task in (prune_task, tor_task, feed_task, warm_task):
         with contextlib.suppress(asyncio.CancelledError):
             await task
     with contextlib.suppress(asyncio.TimeoutError):

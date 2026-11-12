@@ -1,6 +1,7 @@
 """Limits on what a stranger can make the server do: heavy reads, request bodies, WebSocket
 seats, UDP replies and spreadsheet formulas."""
 import asyncio
+import contextlib
 import os
 import tempfile
 import threading
@@ -212,6 +213,84 @@ class SeatTests(unittest.IsolatedAsyncioTestCase):
         s = FakeSocket("198.51.100.7")
         await self.hub.join(s)
         self.assertIn('"type":"init"', s.sent[0])
+
+
+class WarmSnapshotTests(unittest.IsolatedAsyncioTestCase):
+    """The first paint waits for the snapshot, so a visitor must never build one."""
+
+    async def asyncSetUp(self):
+        _, self.store, self.hub = make_client()
+
+    async def asyncTearDown(self):
+        self.store.close()
+
+    def test_the_slow_parts_are_not_in_the_snapshot(self):
+        snap = self.hub.snapshot()
+        self.assertNotIn("campaigns", snap)
+        self.assertNotIn("narrative", snap)
+        self.assertIn("total", snap)
+
+    async def test_the_warmer_fills_the_cache_before_anyone_asks(self):
+        self.hub.WARM_EVERY = 0.01
+        task = asyncio.create_task(self.hub.keep_warm())
+        try:
+            for _ in range(200):
+                if ("snapshot",) in self.hub.reads._items and ("campaigns", 24) in self.hub.reads._items:
+                    break
+                await asyncio.sleep(0.01)
+            built = []
+            # A viewer, and /api/campaigns, get the stored copy, not a rebuild.
+            self.assertIsNotNone(await self.hub.reads.get(("snapshot",), lambda: built.append(1)))
+            await self.hub.reads.get(("campaigns", 24), lambda: built.append(1))
+            self.assertEqual(built, [])
+            s = FakeSocket("198.51.100.7")
+            await self.hub.join(s)
+            self.assertIn('"type":"init"', s.sent[0])
+        finally:
+            task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await task
+
+    async def test_a_warmed_copy_outlives_the_short_cache(self):
+        reads = self.hub.reads
+        reads.ttls[("snapshot",)] = 60.0
+        await reads.refresh(("snapshot",), lambda: {"total": 1})
+        stamp, value = reads._items[("snapshot",)]
+        reads._items[("snapshot",)] = (stamp - reads.ttl - 1, value)   # past the 8 s cache
+        self.assertEqual(await reads.get(("snapshot",), lambda: {"total": 2}), {"total": 1})
+
+    async def test_the_counter_is_never_behind_a_stored_copy(self):
+        await self.hub.reads.refresh(("snapshot",), self.hub.snapshot)
+        self.hub.reads.ttls[("snapshot",)] = 60.0
+        before = (await self.hub.current())["total"]
+        self.store.db.execute(
+            "INSERT INTO counters(kind, proto, key, label, count, first_ts, last_ts) "
+            "VALUES ('total', 'ALL', 'total', 'total', 5, 1, 1) "
+            "ON CONFLICT(kind, proto, key) DO UPDATE SET count = count + 5")
+        self.store.db.commit()
+        # the stored copy is unchanged, the head is read again
+        self.assertEqual((await self.hub.current())["total"], before + 5)
+        self.assertEqual(self.hub.reads._items[("snapshot",)][1]["total"], before)
+
+    async def test_a_failed_rebuild_keeps_the_warmer_alive(self):
+        self.hub.WARM_EVERY = 0.01
+        calls = []
+
+        def broken():
+            calls.append(1)
+            raise RuntimeError("database is locked")
+        self.hub.snapshot = broken
+        task = asyncio.create_task(self.hub.keep_warm())
+        try:
+            for _ in range(200):
+                if len(calls) >= 2:
+                    break
+                await asyncio.sleep(0.01)
+            self.assertGreaterEqual(len(calls), 2)
+        finally:
+            task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await task
 
 
 class UdpGuardTests(unittest.TestCase):

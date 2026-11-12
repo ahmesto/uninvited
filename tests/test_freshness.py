@@ -178,6 +178,75 @@ class AtomTests(Base):
         self.assertEqual(len(outs), 1, outs)
 
 
+class HiddenAddressTests(Base):
+    """dashboard.hide is the operator's own connection. The scrubber shows it as "this server";
+    no city, network or map position may be stored next to it."""
+    HOME = "45.33.32.50"
+
+    def test_the_stored_place_of_a_hidden_address_is_cleared(self):
+        from uninvited.geo import Geo
+        for ip in (self.HOME, "45.33.32.51"):
+            k = Knock(proto="SSH", ip=ip, port=22, ts=self.now - 60, username="root", password="x")
+            k.iso, k.country, k.region, k.city = "US", "United States", "Somewhere", "Some City"
+            k.lat, k.lng, k.asn, k.isp = 42.1, -83.2, 64500, "Some ISP"
+            self.store.record(k)
+        self.assertGreater(self.store.forget_places([self.HOME, " "]), 0)
+        self.assertEqual(self.store.forget_places([self.HOME]), 0)        # nothing left to clear
+        con = self.store.db
+        home = con.execute("SELECT iso, country, region, city, lat, lng, asn, isp FROM knocks WHERE ip = ?",
+                           (self.HOME,)).fetchone()
+        self.assertEqual(tuple(home), tuple(Geo.nowhere()[k] for k in
+                                            ("iso", "country", "region", "city", "lat", "lng", "asn", "isp")))
+        actor = con.execute("SELECT isp, asn FROM actors WHERE ip = ?", (self.HOME,)).fetchone()
+        self.assertEqual(tuple(actor), ("Unknown", None))
+        other = con.execute("SELECT city, isp FROM knocks WHERE ip = '45.33.32.51'").fetchone()
+        self.assertEqual(tuple(other), ("Some City", "Some ISP"))
+
+    def test_new_events_from_it_are_never_placed(self):
+        root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        with open(os.path.join(root, "uninvited", "__main__.py"), encoding="utf-8") as f:
+            main = f.read()
+        self.assertIn("geo.nowhere() if knock.ip in hidden else geo.lookup(knock.ip)", main)
+        self.assertLess(main.index("store.forget_places(hidden)"), main.index("hub = Hub("))
+
+    def test_a_report_note_must_be_text(self):
+        client = self.client(self.build())
+        r = client.post("/api/report", json={"ip": "45.33.32.52", "note": {"$ne": 1}})
+        self.assertEqual(r.status_code, 400)
+
+
+class CloudflareTests(Base):
+    """An attack sent through Cloudflare comes from Cloudflare's own edge. Listing that address
+    would make every site behind Cloudflare that loads the list cut off its own visitors."""
+    EDGE = "172.70.223.160"
+
+    def test_the_published_ranges_are_protected(self):
+        self.assertEqual(intel.protected("1.1.1.1"), "A public DNS resolver.")
+        for ip in (self.EDGE, "162.159.108.150", "104.24.1.1", "2606:4700::6810:1"):
+            self.assertIn("Cloudflare", intel.protected(ip) or "", ip)
+        for ip in ("45.33.32.10", "2001:db8::1", "not an address"):
+            self.assertIsNone(intel.protected(ip), ip)
+
+    def test_an_edge_address_stays_off_every_list_and_says_why(self):
+        for i in range(3):
+            self.login(self.EDGE, 60 + i)
+            self.login("45.33.32.40", 60 + i)
+        cache = self.build()
+        for stem in ("attackers-24h", "attackers-7d", "attackers-30d"):
+            self.assertEqual(self.ips(cache, stem), ["45.33.32.40"], stem)
+        self.assertNotIn(self.EDGE, cache.blocklist(720, 3))
+        client = self.client(cache)
+        self.assertIn("Cloudflare", client.get(f"/api/lookup?ip={self.EDGE}").json()["why_not"])
+        rows = client.post("/api/bulk", json={"ips": [self.EDGE]}).json()["results"]
+        self.assertEqual(rows[0]["verdict"], "protected")
+
+    def test_the_atom_feed_names_the_sender_but_carries_no_indicator_for_it(self):
+        self.deliver(self.EDGE, "http://45.9.148.5/x.sh")
+        body = self.build().files["notable.atom"].body.decode()
+        self.assertIn("from " + self.EDGE, body)
+        self.assertNotIn(f">{self.EDGE}</ioc:indicator>", body)
+
+
 class UnconfirmedTests(Base):
     URL = "http://45.9.148.5/x.sh"
 

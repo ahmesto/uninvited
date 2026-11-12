@@ -37,8 +37,10 @@ forward (BinaryEdge, IPIP, a few Shodan hosts), 28 had no name at all, 1 resolve
 The same confirmation protects the never-list (Googlebot, Bingbot, Applebot): a name under those domains protects an
 address only when it resolves back.
 
-**Never listed, whatever they do:** private and shared address space, the big public resolvers, confirmed search crawlers,
-and anything under `feed.exclude` in the configuration (put your own address there).
+**Never listed, whatever they do:** private and shared address space, the big public resolvers, Cloudflare's published
+edge ranges, confirmed search crawlers, and anything under `feed.exclude` in the configuration (put your own address
+there). An attack from a Cloudflare address was sent through Cloudflare, and a site behind Cloudflare that blocked it
+would cut off its own visitors. The site still shows those hosts; only the lists leave them out.
 
 ## 3. The score (0 to 100)
 

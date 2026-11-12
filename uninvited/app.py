@@ -25,6 +25,7 @@ from .card import build_png, build_png_native, build_svg
 from .core import Config, Knock, PROTO_COLORS, shipped
 from .feeds import CHANGE_LISTS, REFRESH_SECONDS, FeedCache
 from .identity import Identity
+from .intel import protected
 from .history import parse_since
 from .notables import notables as find_notables
 from .redact import Scrubber
@@ -59,12 +60,22 @@ class ReadCache:
         self._pool = ThreadPoolExecutor(workers, thread_name_prefix="read")
         self._items: dict[tuple, tuple[float, Any]] = {}
         self._flights: dict[tuple, asyncio.Future] = {}
+        # Keys a warmer rebuilds on a timer may be served for longer, so a
+        # visitor never pays for a rebuild the warmer is about to do anyway.
+        self.ttls: dict[tuple, float] = {}
 
     def _fresh(self, key: tuple):
         hit = self._items.get(key)
-        if hit and time.monotonic() - hit[0] < self.ttl:
+        if hit and time.monotonic() - hit[0] < self.ttls.get(key, self.ttl):
             return hit
         return None
+
+    async def refresh(self, key: tuple, fn) -> None:
+        """Rebuild one answer now and store it, fresh or not. Visitors keep
+        getting the previous answer while this runs."""
+        loop = asyncio.get_running_loop()
+        value = await loop.run_in_executor(self._pool, fn)
+        self._items[key] = (time.monotonic(), value)
 
     async def get(self, key: tuple, fn):
         hit = self._fresh(key)
@@ -130,7 +141,7 @@ class Hub:
             await ws.close(code=1013)
             return
         try:
-            snapshot = await self.reads.get(("snapshot",), self.snapshot)
+            snapshot = await self.current()
         except Busy:
             await ws.close(code=1013)
             return
@@ -152,7 +163,17 @@ class Hub:
         elapsed = min(window, max(60.0, time.time() - self.started))
         return round(hits / (elapsed / 60), 1)
 
+    async def current(self) -> dict:
+        """The snapshot as served: the stored heavy part, with the headline numbers
+        read now. Those are two small queries, so a copy that is a few seconds old
+        never shows a counter that is behind."""
+        snap = await self.reads.get(("snapshot",), self.snapshot)
+        return {**snap, **self.head()}
+
     def snapshot(self) -> dict:
+        return {**self.head(), **self.body()}
+
+    def head(self) -> dict:
         totals = self.store.totals()
         first = self.store.first_start()
         uptime = max(1, int((time.time() - first) / 60))
@@ -182,13 +203,43 @@ class Hub:
             "uptime_minutes": uptime,
             "kpm": self.kpm(),
             "proto_stats": proto_stats,
+        }
+
+    def body(self) -> dict:
+        return {
             "boards": self.store.boards("ALL", self.cfg["board_size"]),
             "feed": self.store.feed("ALL", self.cfg["feed_size"]),
             "split": self.store.traffic_split(),
             "offenders": self.store.offenders(12),
-            "narrative": narrate(self.store, 1),
-            "campaigns": campaigns(self.store, 24),
+            # No campaigns or narrative here: the page asks for both right after
+            # this arrives, and the campaign grouping alone took seconds, which
+            # every new visitor waited for before seeing a single number.
         }
+
+    # The first paint waits for the snapshot, so it is rebuilt on a timer instead
+    # of when a visitor asks. The site is quiet enough that an 8 s cache was
+    # nearly always empty and most visitors waited 4 to 20 s for a cold build.
+    WARM_EVERY = 15        # seconds between snapshot rebuilds
+    WARM_SLOW = 8          # campaigns every 8th round, two minutes
+    WARM_KEYS = {("snapshot",): 60.0, ("campaigns", 24): 300.0}  # longest a copy is served
+
+    async def keep_warm(self) -> None:
+        """Runs for the life of the service. If it stalls, the longer TTLs run
+        out and requests build their own answers as before."""
+        self.reads.ttls.update(self.WARM_KEYS)
+        jobs = [(("snapshot",), self.snapshot, 1),
+                (("campaigns", 24), lambda: campaigns(self.store, 24), self.WARM_SLOW)]
+        n = 0
+        while True:
+            for key, fn, every in jobs:
+                if n % every:
+                    continue
+                try:
+                    await self.reads.refresh(key, fn)
+                except Exception:
+                    log.exception("could not rebuild %s", key[0])
+            n += 1
+            await asyncio.sleep(self.WARM_EVERY)
 
     async def publish(self, knock: Knock, stats: dict) -> None:
         self.recent.append(knock.ts)
@@ -443,7 +494,11 @@ def build_app(cfg: Config, store: Store, hub: Hub, feeds: FeedCache) -> FastAPI:
 
     @app.get("/api/stats")
     async def stats():
-        return await heavy(("snapshot",), hub.snapshot)
+        try:
+            return await hub.current()
+        except Busy:
+            return JSONResponse({"error": "busy, retry shortly"}, status_code=503,
+                                headers={"Retry-After": "5"})
 
     @app.get("/api/boards")
     async def boards(proto: str = Query("ALL"),
@@ -686,6 +741,7 @@ def build_app(cfg: Config, store: Store, hub: Hub, feeds: FeedCache) -> FastAPI:
         """Everything the dashboard knows about one public address. Blocking: run it in an executor."""
         now = time.time()
         ev = store.evidence(text)
+        never = protected(text)
         intel = feeds.lookup(text) if feeds.ready else {
             "listed": {}, "score": None, "techniques": [], "cves": [],
             "exploits": [], "engaged_30d": 0}
@@ -694,7 +750,9 @@ def build_app(cfg: Config, store: Store, hub: Hub, feeds: FeedCache) -> FastAPI:
             why = "This server has never seen that address."
         elif not any(intel["listed"].values()):
             actor = ev["actor"]
-            if actor.get("kind") and actor["kind"] != "attack":
+            if never:
+                why = never + " Never listed."
+            elif actor.get("kind") and actor["kind"] != "attack":
                 why = (f"Classified as {actor.get('label') or actor['kind']}, so it is kept on "
                        "its own list and never in the attacker list.")
             elif now - (actor.get("last_ts") or 0) > 30 * 86400:
@@ -866,8 +924,8 @@ def build_app(cfg: Config, store: Store, hub: Hub, feeds: FeedCache) -> FastAPI:
                          "last_seen": None, "note": "Never seen by this server."}
             if not addr.is_global or hub.scrub.text(ip) != ip:
                 row.update(verdict="private", note="Private or reserved, so it cannot be in the data.")
-            elif ip in intel.NEVER_ADDRESSES:
-                row.update(verdict="protected", note="A public DNS resolver. Never listed.")
+            elif reason := intel.protected(ip):
+                row.update(verdict="protected", note=reason + " Never listed.")
             else:
                 info = feeds.lookup(ip) if feeds.ready else {"listed": {}}
                 actor = known.get(ip)
@@ -903,7 +961,10 @@ def build_app(cfg: Config, store: Store, hub: Hub, feeds: FeedCache) -> FastAPI:
         try:
             body = json.loads(raw)
             addr = parse_addr(str(body.get("ip", "")))
-            note = re.sub(r"[\x00-\x1f\x7f-\x9f]", " ", str(body.get("note", "")))[:500].strip()
+            note = body.get("note", "")
+            if not isinstance(note, str):
+                raise ValueError("the note must be text")
+            note = re.sub(r"[\x00-\x1f\x7f-\x9f]", " ", note)[:500].strip()
         except (ValueError, AttributeError):
             addr = None
         if addr is None:

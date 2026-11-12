@@ -40,17 +40,14 @@ class Geo:
             if reader is not None:
                 reader.close()
 
+    @staticmethod
+    def nowhere() -> dict:
+        """What an address with no known place gets."""
+        return {"iso": "XX", "country": "Unknown", "region": "", "city": "",
+                "lat": None, "lng": None, "asn": None, "isp": "Unknown"}
+
     def lookup(self, ip: str) -> dict:
-        out = {
-            "iso": "XX",
-            "country": "Unknown",
-            "region": "",
-            "city": "",
-            "lat": None,
-            "lng": None,
-            "asn": None,
-            "isp": "Unknown",
-        }
+        out = self.nowhere()
         try:
             addr = ipaddress.ip_address(ip)
         except ValueError:

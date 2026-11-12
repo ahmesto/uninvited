@@ -253,6 +253,26 @@ class Store:
             n = self.db.execute("SELECT COUNT(*) AS n FROM actors").fetchone()["n"]
             log.info("backfilled %d actors from %d historical knocks", n, knocks)
 
+    def forget_places(self, ips) -> int:
+        """Clear the place stored for these addresses: dashboard.hide, the operator's own
+        connection. The scrubber turns the address into "this server", but a city, network
+        and map position next to it would still say where the operator is."""
+        ips = sorted({str(i).strip() for i in ips or () if str(i).strip()})
+        if not ips:
+            return 0
+        marks = ",".join("?" * len(ips))
+        with self.lock:
+            n = self.db.execute(
+                f"""UPDATE knocks SET iso = 'XX', country = 'Unknown', region = '', city = '',
+                    lat = NULL, lng = NULL, asn = NULL, isp = 'Unknown'
+                    WHERE ip IN ({marks}) AND (lat IS NOT NULL OR city != '' OR isp != 'Unknown'
+                    OR asn IS NOT NULL)""", ips).rowcount
+            n += self.db.execute(
+                f"""UPDATE actors SET iso = 'XX', country = 'Unknown', isp = 'Unknown', asn = NULL
+                    WHERE ip IN ({marks}) AND (isp != 'Unknown' OR asn IS NOT NULL)""", ips).rowcount
+            self.db.commit()
+        return n
+
     def close(self) -> None:
         with self._readers_lock:
             for con in self._readers:

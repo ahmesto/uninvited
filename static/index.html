@@ -1928,8 +1928,8 @@ with open(STATE, "w") as f:
         number is a floor. I would rather publish a number that can go down than a promise.</p>
 
       <h4>Never listed</h4>
-      <p>Public DNS resolvers, the big search crawlers, private and shared address space, and
-        anything on my own exclude list never make it in, however they behave.</p>
+      <p>Public DNS resolvers, Cloudflare's network, the big search crawlers, private and shared
+        address space, and anything on my own exclude list never make it in, however they behave.</p>
 
       <h4>A wrong entry</h4>
       <p>Addresses get reassigned, so a host can be listed for what its last owner did. Open
@@ -4090,8 +4090,6 @@ function applyInit(d){
   S.feed       = d.feed || [];
   if(d.split)     { S.split = d.split; }
   if(d.offenders) { S.offenders = d.offenders; drawOffenders(); }
-  if(d.narrative) { S.brief = d.narrative; drawBrief(); }
-  if(d.campaigns) { S.campaigns = d.campaigns; drawCampaigns(); }
   paintProtoUI();
   $("#host").textContent = "live";
   paintHead(); drawFeed(); drawBoards(); reseedDots();

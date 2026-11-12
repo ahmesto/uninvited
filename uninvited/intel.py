@@ -12,6 +12,8 @@ but no CVE.
 """
 from __future__ import annotations
 
+import ipaddress
+
 # HTTP exploit name (as named in listeners.HTTP_SIGNATURES) -> CVE.
 EXPLOIT_CVE: dict[str, str] = {
     "Log4Shell (CVE-2021-44228)": "CVE-2021-44228",
@@ -313,6 +315,16 @@ NEVER_ADDRESSES = (
     "1.1.1.1", "1.0.0.1", "8.8.8.8", "8.8.4.4", "9.9.9.9", "149.112.112.112",
     "208.67.222.222", "208.67.220.220",
 )
+# Cloudflare's published edge ranges (cloudflare.com/ips, read 2026-10-07). An attack from one of them
+# is someone sending through Cloudflare, and a site behind Cloudflare that loaded the address into
+# its own firewall would cut off the visitors Cloudflare routes through it.
+NEVER_NETWORKS = tuple(ipaddress.ip_network(n) for n in (
+    "173.245.48.0/20", "103.21.244.0/22", "103.22.200.0/22", "103.31.4.0/22", "141.101.64.0/18",
+    "108.162.192.0/18", "190.93.240.0/20", "188.114.96.0/20", "197.234.240.0/22", "198.41.128.0/17",
+    "162.158.0.0/15", "104.16.0.0/13", "104.24.0.0/14", "172.64.0.0/13", "131.0.72.0/22",
+    "2400:cb00::/32", "2606:4700::/32", "2803:f800::/32", "2405:b500::/32", "2405:8100::/32",
+    "2a06:98c0::/29", "2c0f:f248::/32",
+))
 # Big platforms. A download URL on one of these is never listed: it is as likely an attempt to
 # get a legitimate file blocked as a real dropper, and listing it only costs that platform's users.
 NEVER_DOMAINS = (
@@ -325,6 +337,20 @@ NEVER_DOMAINS = (
 NEVER_RDNS_SUFFIXES = (
     ".googlebot.com", ".search.msn.com", ".applebot.apple.com",
 )
+
+
+def protected(ip: str) -> str | None:
+    """Why an address is never listed, whatever it does, or None. Private space, crawlers and
+    feed.exclude are checked where their data is."""
+    if ip in NEVER_ADDRESSES:
+        return "A public DNS resolver."
+    try:
+        addr = ipaddress.ip_address(ip)
+    except ValueError:
+        return None
+    if any(addr in net for net in NEVER_NETWORKS):
+        return "Cloudflare's network. Blocking it would cut off sites behind Cloudflare."
+    return None
 
 
 def technique_url(tid: str) -> str:

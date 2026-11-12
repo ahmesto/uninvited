@@ -99,6 +99,9 @@ CHANGELOG = [
                "replaces; the malware URL text files say they hold raw URLs; index.json lists the defender "
                "files; MISP tags carry colours; responses are cached only until the next rebuild; SSH client "
                "fingerprints (hassh) are now captured for every SSH login, not one host in eight"},
+    {"date": "2026-10-07", "schema_version": "1.0",
+     "change": "Cloudflare's published edge ranges are never listed: an attack from one is sent through "
+               "Cloudflare, and blocking the address would cut off sites behind Cloudflare"},
     {"date": "2026-10-06", "schema_version": "1.0",
      "change": "an attacker leaves every list at its expires time (3 to 11 days after its last attack) instead of "
                "staying for the whole window, and a malware URL 14 days after it was last asked for; lists are "
@@ -326,15 +329,15 @@ class FeedCache:
         return any(addr in net for net in self.exclude)
 
     def _publishable(self, ip: str, rdns: str | None = None) -> bool:
-        """Never listed, whatever the host did: private and shared space, the
-        addresses in intel.NEVER_ADDRESSES, the big search crawlers (a name under
-        their domain that resolves back to the address), and anything under
-        feed.exclude in the config."""
+        """Never listed, whatever the host did: private and shared space, public
+        resolvers and Cloudflare's network (intel.protected), the big search crawlers
+        (a name under their domain that resolves back to the address), and anything
+        under feed.exclude in the config."""
         try:
             addr = ipaddress.ip_address(ip)
         except ValueError:
             return False
-        if not addr.is_global or ip in intel.NEVER_ADDRESSES:
+        if not addr.is_global or intel.protected(ip):
             return False
         if (rdns and rdns.lower().rstrip(".").endswith(intel.NEVER_RDNS_SUFFIXES)
                 and self._crawler_confirmed(ip, rdns)):
